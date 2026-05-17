@@ -69,24 +69,24 @@ write correctly.
 |-------------------|--------|-----------------------------|------------------------------------|
 | `src/path/file.ext` (or function name) | extend / extend-in-place / net-new | `src/path/anchor.ext:L123` OR "net-new" | "Adds `scope` parameter at function entry; branches at line L45" / "Net-new: distinct lifecycle entry point (HTTP handler vs batch worker); shared logic lives in `src/path/core/`" |
 
-**Worked example (anonymized):**
+**Worked example:**
 
-A multi-account feature adds a "portfolio view" that aggregates per-
-account data. The LLD says "Feeds the existing analysis engine ONE
-combined input vector (same compute, just a wider input)."
+A "bulk Foo" feature adds an aggregated entry point that processes
+many Foos in one call. The LLD says "Feeds the existing Foo processor
+ONE wider input vector (same compute, just a wider input)."
 
 | Proposed Artifact | Action | Existing Anchor | Diff Shape |
 |-------------------|--------|-----------------|------------|
-| Portfolio analysis entry | extend-in-place | `src/analysis/engine.ts:155` | Add `analyzePortfolio(input)` top-level function in SAME file delegating to internal `analyzeCore` which accepts a holdings vector; `analyzeAccount(account)` and `analyzePortfolio(portfolio)` both call `analyzeCore`. NO parallel `portfolio.ts`. |
-| Portfolio dashboard render | extend-in-place | `src/web/pages/Dashboard.tsx:200` | Add `scope?: "account" \| "portfolio"` prop; branch hook selection at line top; route table mounts the same component for both `/accounts/:uuid/dashboard` and `/portfolios/:uuid/dashboard`. NO new file. |
+| Bulk Foo processor entry | extend-in-place | `src/processor/foo.ts:155` | Add `processFooBatch(items)` top-level function in SAME file delegating to internal `processCore` which accepts a single-or-multi item input; `processFoo(item)` and `processFooBatch(items)` both call `processCore`. NO parallel `bulk-foo.ts`. |
+| Bulk Foo page render | extend-in-place | `src/web/pages/Foo.tsx:200` | Add `scope?: "single" \| "bulk"` prop; branch the hook selection at the top of the component; route table mounts the same component for both `/foo/:id` and `/foo/bulk`. NO new file. |
 
 **Forbidden shape** (what real projects ship when this table is
-missing): a separate `PortfolioDashboard.tsx` next to `Dashboard.tsx`
-(near-clone with one swapped hook), a separate `portfolio.ts` next to
-`engine.ts` (parallel orchestrator re-implementing fan-out logic).
-Every reviewer that grades the new file in isolation passes it
-because the file IS correctly implemented — the bug is that it exists
-at all.
+missing): a separate `BulkFoo.tsx` next to `Foo.tsx` (near-clone with
+one swapped hook), a separate `bulk-foo.ts` next to `foo.ts` (parallel
+processor re-implementing the validation + fan-out logic from
+scratch). Every reviewer that grades the new file in isolation passes
+it because the file IS correctly implemented — the bug is that it
+exists at all.
 
 ---
 

@@ -421,9 +421,11 @@ Verdicts grading CONTENT (placeholders / fail-fast / SQL / decimal / etc.) witho
 
 ### 10.6 Worked Anti-Example
 
-A real project's epic said: "Feeds the existing analysis engine ONE combined input vector (same compute, no algorithmic change ... just a wider input)" — anchor `services/analysis/engine.go`. The implementer read "new entry point" as "new package + parallel file" and produced `services/analysis/portfolios/engine.go` (472 LOC) next to `analysis/engine.go` (713 LOC), re-writing the sector-backfill logic from scratch and silently missing one step. Every reviewer passed the new file in isolation because it was correctly implemented in isolation; none flagged that the same function existed 12 lines above. Latent bug shipped to main. **The bug was that the new file existed at all.**
+A team's epic said: "Feeds the existing Foo processor ONE wider input vector (same compute, no algorithmic change ... just a wider input)" — anchor `pkg/foo/foo.go`. The implementer read "new entry point" as "new package + parallel file" and produced `pkg/foo/bar/foo.go` (472 LOC) next to `pkg/foo/foo.go` (713 LOC), re-writing the input-validation logic from scratch and silently missing one validation step. Every reviewer passed the new file in isolation because it was correctly implemented in isolation; none flagged that the same function existed 12 lines above. Latent bug shipped to main. **The bug was that the new file existed at all.**
 
-Same pattern on the frontend of that project: a `PortfolioDashboard.tsx` (344 LOC) shipped next to `Dashboard.tsx` (482 LOC) as a near-clone with one swapped hook + a different icon. Six sibling parallel pages + a parallel hook tree + a parallel component dir all landed without a single reviewer asking "should this file exist?"
+Same pattern on the frontend of that project: a `BarFoo.tsx` (344 LOC) shipped next to `Foo.tsx` (482 LOC) as a near-clone with one swapped hook + a different icon. Six sibling parallel pages + a parallel hook tree + a parallel component dir all landed without a single reviewer asking "should this file exist?"
+
+The right shape would have been: `Foo` and `FooBatch` as two top-level functions in `pkg/foo/foo.go`, each delegating to an internal `fooCore` that accepts a single-or-multi item input. On the frontend, `Foo.tsx` takes a `scope?: "single" | "bulk"` prop, and the route table mounts the same component for both `/foo/:id` and `/foo/bulk`. No parallel files, no copy-pasted logic, one source of truth.
 
 ---
 
@@ -580,9 +582,11 @@ Run the §10 (No Parallel Implementations) scans on every diff:
 
 ```bash
 # Filename-pair scan — flag <Prefix>X.tsx next to X.tsx
+# Substitute the scope prefixes your project actually uses
+# (e.g. Admin, Bulk, Tenant, Org, User, etc.).
 for f in src/pages/*.tsx; do
   base=$(basename "$f" .tsx)
-  for prefix in Portfolio Account Admin User Tenant; do
+  for prefix in Admin Bulk Tenant Org User; do
     if [[ "$base" == "$prefix"* && "$base" != "$prefix" ]]; then
       anchor="${base#$prefix}"
       if [ -f "src/pages/${anchor}.tsx" ]; then
