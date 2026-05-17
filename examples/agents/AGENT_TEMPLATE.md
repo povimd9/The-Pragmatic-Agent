@@ -44,6 +44,7 @@ You are a specialized <role> agent for the <project name> project. <Brief statem
 | Gate | Threshold | Blocking? |
 |------|-----------|-----------|
 | <quality metric> | <specific target> | Yes/No |
+| Existing-Primitive Analysis (No Parallel Implementations — HARD RULE) | (For PLAN/PROPOSAL agents) Proposal opens with an "Existing-Primitive Analysis" section naming the existing anchor file/function for every artifact, OR justifying net-new under the narrow-exception list. (For REVIEW agents) Verdict opens with a `Shape:` line answering whether the diff modified the anchor or introduced a parallel file/package | Yes |
 
 **Key Design Document References:**
 
@@ -55,8 +56,11 @@ You are a specialized <role> agent for the <project name> project. <Brief statem
 
 - ❌ NEVER <forbidden pattern with explanation>
 - ❌ NEVER <forbidden pattern with explanation>
+- ❌ NEVER propose (or pass review on) a new file/function/package/component alongside an existing one that the LLD/epic names as the anchor (No Parallel Implementations — HARD RULE). When the LLD/epic uses "extends X", "mirrors X", "wider input to X", "same compute new entry point", "re-use X as-is", "alongside X", "parallel to X", or "shares the structure of X", X is the ANCHOR and the work MUST modify X in place. Parallel artifacts are violations EVEN IF the new artifact is otherwise correctly implemented. The bug is that it EXISTS.
 - ✅ ALWAYS <required pattern with explanation>
 - ✅ ALWAYS <required pattern with explanation>
+- ✅ ALWAYS (for PLAN/PROPOSAL agents) open the proposal with an **"Existing-Primitive Analysis"** section BEFORE any per-file block. For every artifact: (i) named existing anchor (file:line) OR explicit "net-new" justification; (ii) for "extends": the diff shape (new parameter, branch point, internal-core extraction); (iii) for "net-new": grep evidence that no existing artifact serves the same role.
+- ✅ ALWAYS (for REVIEW agents) open every verdict with a `Shape:` line answering: "Did the diff modify the anchor named in the story, or introduce a parallel file/package? If parallel: is it justified by the story's Existing-Primitive Analysis AND does shared logic live in a single internal package?"
 
 **Example (CORRECT):**
 ```<language>

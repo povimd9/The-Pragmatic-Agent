@@ -106,6 +106,35 @@ components:
 
 **Why this matters:** We've seen agents use EMQX 4.x config syntax when the project uses 5.x, deprecated React Router patterns, and library features that don't exist in pinned versions. A version file prevents all of these.
 
+#### Per-Epic Pin Protocol
+
+LLDs name dependencies but DO NOT pin versions at design time. Pinning happens in the owning epic's Story 0:
+
+- If the dependency is already in `VERSIONS.yaml`, reuse the existing pin verbatim — never parallel-pin, never per-epic drift.
+- Otherwise, pin latest stable as of story start. Capture the vendor changelog summary in the story's acceptance criteria so the operator can approve the choice before implementation begins.
+- LLD §2.3 dependency tables list `pinned at <epic-id>` for unpinned items.
+
+This split keeps LLDs version-stable (their content doesn't churn every time a library releases a patch) while ensuring no implementation story uses an un-vetted version.
+
+#### Version-Bump Approval Gate
+
+**Bumping a pin is the same gate as adding a new dependency** — both require explicit human approval. Bumps aren't "just change the tag"; environment variables, CLI flags, YAML schema keys, and config field names break across minor versions. Before changing any pin:
+
+1. Read the vendor changelog and config schema diff.
+2. Capture the diff in the relevant LLD or decision log.
+3. Surface to the operator with a recommended path (proceed / hold / revert) before applying.
+
+#### Container Image Selection
+
+For every external dependency you run as a container (database, message broker, identity provider, headless browser, reverse proxy, etc.), pin the image deterministically:
+
+1. Verify maintainership at the **vendor's official source-of-truth site**, not Docker Hub alone. The Docker-Official-Image badge is necessary but not sufficient.
+2. If officially maintained: pin the latest LTS `major.minor.patch`; if no LTS, latest stable (exclude `-rc`/`-alpha`/`-beta`).
+3. If NOT officially maintained: build a local Dockerfile FROM a minimal distro (`alpine:<pin>`, `gcr.io/distroless/static-nonroot`) following the project's install guide. Multi-stage, non-root, read-only-rootfs.
+4. Record in `VERSIONS.yaml` with a `notes:` line citing the official-page URL that confirmed maintainership + the LTS/stable choice.
+
+Companion rule in the agent instruction file (Section 2.1): if the agent cannot reach the official source via the wget → structured-fetch → headless-browser tool ladder, it STOPS and asks rather than pivoting to an unverified tag.
+
 ### 2.3 Specification Repository
 
 For multi-team projects, maintain a shared specification repository as the single source of truth for integration contracts (API schemas, message formats, protocol definitions). This prevents the "two teams, two interpretations" problem.
@@ -198,9 +227,9 @@ Without HLD/LLD, agents make contradictory architectural decisions across storie
 | Layer | What the Human Must Verify | Common Agent Mistakes to Catch |
 |-------|---------------------------|-------------------------------|
 | **HLD** | Component boundaries make sense; constraints are correct and complete; nothing critical is missing from non-goals | Invents plausible-sounding components that aren't needed; omits constraints the human mentioned verbally but didn't write down; under-specifies security or multi-tenancy |
-| **LLD** | Interfaces match what consumers actually need; failure modes are realistic, not theoretical; performance budgets are achievable | Generates symmetrical/clean interfaces that don't match real usage patterns; lists failure modes without practical mitigations; copies performance numbers from training data instead of your actual constraints |
-| **Epic** | Stories cover all LLD requirements; acceptance criteria actually prove the feature works (not just exercise it); all decisions are captured with rationale | Writes acceptance criteria that test the happy path but miss edge cases; leaves implicit decisions undocumented ("obvious" choices that aren't obvious); generates verification commands that pass even when the feature is broken |
-| **Story** | Verification commands are runnable and meaningful; implementation tasks are complete; LLD traceability is correct | References wrong LLD sections; generates curl commands that test the wrong endpoint; omits tasks that are "obvious" but will be forgotten |
+| **LLD** | Interfaces match what consumers actually need; failure modes are realistic, not theoretical; performance budgets are achievable; **§2.4 Existing-Primitive Map present** — every artifact this LLD adds names its existing anchor by file path OR is justified as net-new under the narrow-exception list | Generates symmetrical/clean interfaces that don't match real usage patterns; lists failure modes without practical mitigations; copies performance numbers from training data instead of your actual constraints; **uses trap-phrases ("mirrors X", "wider input", "same compute", "re-use as-is", "extends X", "alongside X", "parallel to X") without naming the anchor by file path** — this is the single most-damaging LLD-authoring miss, because it licenses implementer agents to produce parallel files instead of extending the named anchor |
+| **Epic** | Stories cover all LLD requirements; acceptance criteria actually prove the feature works (not just exercise it); all decisions are captured with rationale; **every story carries its own Existing-Primitive Analysis table** | Writes acceptance criteria that test the happy path but miss edge cases; leaves implicit decisions undocumented ("obvious" choices that aren't obvious); generates verification commands that pass even when the feature is broken; carries the LLD's trap-phrases forward into stories without anchors |
+| **Story** | Verification commands are runnable and meaningful; implementation tasks are complete; LLD traceability is correct; **Existing-Primitive Analysis is filled in for every proposed artifact** | References wrong LLD sections; generates curl commands that test the wrong endpoint; omits tasks that are "obvious" but will be forgotten; proposes a new file alongside an existing one without justifying parallelism |
 
 **The review question at every layer is: "If I hand this to an agent that follows it literally, will the result be correct?"** If the answer is "only if the agent also understands X" — then X needs to be in the document.
 
@@ -280,6 +309,30 @@ Instruction files are living documents. Every time an agent violates a rule that
 
 **Rule quality benchmark:** If you can show someone the rule and they could both identify a violation and fix it without asking follow-up questions, the rule is good. If not, it needs a code example or concrete scan command.
 
+#### Memory Files: Project-Scoped Persistent Rules
+
+For platforms whose agents support a project-scoped memory (a directory of small markdown files loaded into context alongside the instruction file), prefer storing each new rule as **its own memory file** rather than appending to one ever-growing instructions file:
+
+```
+.agent-memory/
+  MEMORY.md                              # one-line index, links to each file
+  feedback_no_hardcoded_config.md
+  feedback_no_papering_over.md
+  feedback_no_parallel_implementations.md
+  feedback_security_stance.md
+  ...
+```
+
+Each memory file is **named for the rule**, opens with a one-line description usable in the index, and contains: (a) the rule itself, (b) a `Why:` line citing the past incident that triggered it, (c) a `How to apply:` block with concrete grep commands or code patterns.
+
+This pattern survives context compression better than a 5,000-line instructions file: the index stays in view, and the agent loads only the relevant memory files when their topics come up. Update or remove memories that turn out to be wrong; never let a stale memory linger.
+
+#### Naming Discipline: One Rule per File, Indexed
+
+- One rule = one file. Don't bundle "fail-fast" and "no-parallel-implementations" into one file just because they're both anti-patterns.
+- The index (`MEMORY.md`) is a single-line-per-entry pointer; the body lives in the named file.
+- Memory file names are descriptive (`feedback_no_parallel_implementations.md`), not date-stamped — the rule outlives the incident that prompted it.
+
 ---
 
 ## 5. Defining Agent Roles & Authority
@@ -300,6 +353,14 @@ A single general-purpose agent trying to handle firmware, cloud infrastructure, 
 | Platform/Backend | Backend services, databases, UI | Go/Python backend, React frontend, PostgreSQL |
 | IoT/Networking | Messaging, device connectivity | MQTT, mTLS, device provisioning |
 | Robotics | Navigation, localization, control | ROS2, Nav2, SLAM, sensor fusion |
+
+**Strict authority split (HARD RULE for the per-story loop):**
+
+- **PLAN / PROPOSAL agents** produce written implementation proposals as text output. They do NOT edit code — even when tooling allows it. The driver (human + implementing agent in a separate session) writes the diff. If a plan agent edits a file, that's a process violation: stop, revert, re-prompt with `RESEARCH-ONLY (do NOT edit files)`. Narrow carve-out: design-authoring agents (LLD authors, decision-log authors) that draft AND write within strictly scoped paths (e.g., `design/llds/` only) — but anything outside their declared scope is still a violation.
+- **REVIEW agents** are READ-ONLY. They cannot modify code. They produce a PASS/BLOCK verdict against the original story acceptance criteria with citations to `file:line`. A reviewer that grades the plan instead of the diff is invalid — re-run. Every reviewer verdict opens with a `Shape:` line (see §10 in the agent instruction file).
+- **IMPLEMENTATION drivers** (the human-orchestrated session that actually writes the diff) own the code. They consume the plan agent's proposal, refine as needed, and write. They dispatch reviewer agents AFTER the diff lands.
+
+The "split brain" model (one model proposes, a different model implements, another reviews) is deliberate: it forces the proposal to be readable enough for a separate context to act on, and gives the reviewer fresh eyes on a diff that was not written by the same context that planned it. Skipping the split (one agent plans + writes + reviews its own diff) consistently produces over-confident PASS verdicts on broken code.
 
 **Review Agents** — Read-only validation. Cannot modify code. Two authority levels:
 
@@ -404,6 +465,28 @@ At minimum:
 - Fail the pipeline when blocking checks find a violation.
 - Keep the CI commands identical to the commands documented in the instruction file and epic so there is one definition of "verified."
 
+#### Required Scan Categories
+
+| Scan | What it catches | Source |
+|---|---|---|
+| Placeholder scan | `TODO`, `FIXME`, "would implement" stubs | §4 (No Placeholders) |
+| Fail-fast violations | bare `except`, `.get(key, default)` in error paths, silent return None | §3 (Fail-Fast) |
+| SQL injection | `fmt.Sprintf` / string interpolation in SQL | §7 (Security) |
+| Hardcoded config | language literals outside the loader package — every match is an explicit gate, never auto-dismissable | §3.6 (No Hardcoded Config) |
+| Static-scan baseline | shellcheck / yamllint / `go vet` / `tsc --noEmit` / language linter | §13.1.1 (Static Scans Are Basic Tests) |
+| Parallel implementation | scope-prefixed file next to anchor file; parallel hook/component tree; orchestrator duplicates | §10 (No Parallel Implementations) |
+| Trap-phrase audit on LLDs/epics | "mirrors", "wider input", "same compute", "re-use as-is", "extends" used without naming the anchor by file path | §10.5 (LLD-authoring quality gate) |
+| Spec round-trip | OpenAPI / wire-contract regeneration leaves zero diff vs committed; bidirectional code↔spec parity | §8 (Spec Compliance) |
+| End-of-epic runtime | full epic-level integration on a real environment AFTER the last story merges | §13.3.1 (End-of-Epic Runtime Test) |
+
+The static-scan baseline (shellcheck / yamllint / go vet / tsc / linter) is **mandatory, not optional polish**. Findings are not auto-dismissable as "false positives" — every finding gets the same treatment as a hardcoded-config match: STOP, diagnose, fix or surface for explicit approval (with an in-source disable directive AND a commit-message reason).
+
+#### LLM-Reviewer-Specific Failure Mode: Content-Without-Shape
+
+A common LLM-as-reviewer failure: the reviewer grades content correctness (no placeholders, fail-fast respected, decimal math used, SQL parameterized) inside a file — but doesn't check whether the file should exist at all. A near-clone of an existing file that swaps one hook will pass every content-level check and ship a duplicate.
+
+Counter this by requiring every reviewer verdict to open with a `Shape:` line answering: "Did the diff modify the anchor named in the story, or introduce a parallel file/package? If parallel: is it justified by the story's Existing-Primitive Analysis?" Verdicts grading content without verifying shape are invalid — re-run.
+
 ---
 
 ## 7. Story Execution Orchestration
@@ -416,28 +499,45 @@ This is the operational core — how a single story moves from backlog to done. 
 Story selected from sprint backlog
   |
   v
-a. PLAN — Task the most relevant specialized agent to generate
-   an implementation plan for this story.
+a. PLAN — Plan/Proposal agent generates an implementation plan.
+   Plan opens with "Existing-Primitive Analysis" (§10) naming
+   the anchor file:line for every artifact. PLAN-ONLY: agent
+   does NOT edit code.
   |
   v
-b. REVIEW PLAN — Review the plan yourself (or with another agent)
-   to validate it covers ALL story requirements and adheres to
-   official docs/examples. Return for revision if needed.
+b. SANITY-CHECK PLAN — Driver validates the plan against the
+   story's acceptance criteria, LLD, and invariants. Confirms
+   the Existing-Primitive Analysis is present and unambiguous.
+   Reject + re-plan if missing.
   |
   v
-c. IMPLEMENT — Agent executes the validated plan.
+c. IMPLEMENT — Driver writes the diff. Plan agent does NOT
+   write code (even though it could, tooling-wise).
   |
   v
-d. REVIEW IMPLEMENTATION — Task an agent to review the implementation
-   against the ORIGINAL STORY acceptance criteria (not the plan).
-   This catches plan-vs-story drift.
+d. REVIEW IMPLEMENTATION — Review agent(s) review the diff
+   against the ORIGINAL STORY acceptance criteria (not the
+   plan). Every verdict opens with a `Shape:` line. Reviewers
+   are READ-ONLY. Fan out reviewer agents + CI/test/static-scan
+   suite in a SINGLE parallel batch so all findings come back
+   together.
   |
   v
-e. FIX & TEST — Fix issues found in review. Build, deploy, and
-   validate that nothing broke. Run completion verification scans.
+e. FIX & TRACKER — Triage findings, fix, re-run review where
+   needed. Update the implementation tracker (status flip +
+   per-story log entry).
   |
   v
-f. UPDATE TRACKER — Mark story complete with proof. Move to next story.
+f. BRANCH + COMMIT + PR + MERGE — Per-story feature-branch
+   workflow (HARD RULE). One story = one atomic commit on its
+   own branch = one PR = one merge. Branch from origin/main;
+   commit message names the story; PR body cites reviewer
+   verdicts; merge with --delete-branch; pull main + prune.
+   NEVER push directly to main; NEVER batch multiple stories
+   into one commit.
+  |
+  v
+g. NEXT STORY — Loop to (a).
 ```
 
 ### 7.2 Critical Rules
@@ -453,6 +553,10 @@ f. UPDATE TRACKER — Mark story complete with proof. Move to next story.
 5. **Validate content, not just flow.** "Data is flowing" is not the same as "data values are correct." Spot-check actual values against expected.
 
 6. **Static analysis is not verification.** Grepping files, reading code, and code review don't count. Only actual build, run, deploy, and test execution counts as verification.
+
+7. **Default to parallel fan-out.** Reviewer agents and the static-scan / test / CI suite are independent of each other. Dispatch them in a SINGLE parallel batch (multiple agent invocations + multiple shell invocations in one message) so all findings come back together for unified triage. Running them sequentially (reviewers-then-CI, or CI-then-reviewers) doubles round-trip time AND produces two separate triage rounds when the second batch's findings overlap with the first.
+
+8. **One PR per story.** Each story lands as its own atomic commit on its own feature branch, opened as a PR with reviewer verdicts in the body, merged (or rebased) cleanly, then the branch is deleted. NEVER push to main. NEVER batch multiple stories into one commit. The audit trail is per-story-per-PR; this matters when a regression has to be tracked back to its source.
 
 ### 7.3 Session Sizing
 
@@ -492,8 +596,9 @@ Good epic templates serve two purposes: they guide the agent that *generates* th
 | LLD Reference | Which design doc, which sections (with line numbers) |
 | Overview | 2-3 sentence scope description |
 | Stories | Ordered list with acceptance criteria and verification commands |
+| Existing-Primitive Analysis (per-story) | For every artifact a story produces, the named existing anchor (file:line) OR explicit "net-new" narrow-exception justification. Trap-phrases without an anchor are rejected at LLD/epic review. |
 | Official Documentation | Versioned URLs the agent must read BEFORE implementation |
-| Non-Negotiable Rules | Fail-fast, no placeholders, spec compliance — repeated in every epic |
+| Non-Negotiable Rules | Fail-fast, no placeholders, no parallel implementations, spec compliance — repeated in every epic |
 
 ### 8.2 Story Template
 
@@ -516,6 +621,9 @@ Include this in every epic template so it's in context every time an agent works
 5. MANDATORY Verification Commands for each criterion
 6. ALL Decisions documented in this epic (STOP > ASK if unclear)
 7. MANDATORY Official Documentation before implementation
+8. NO Hardcoded Config Values — every config-derived value comes from the loader, NEVER a language literal (no auto-justifying "matches the YAML so it's safe")
+9. NO Parallel Implementations — every artifact has a named existing anchor (file:line) OR explicit narrow-exception justification; the per-story Existing-Primitive Analysis table is filled in BEFORE implementation
+10. FIX ROOT CAUSES, NOT SYMPTOMS — no retry loops / timeout bumps / fallback defaults / cache extensions to mask a reported bug; trace to root cause or surface as `ARC REVIEW REQUIRED`
 ```
 
 ### 8.4 Decision Documentation
@@ -641,6 +749,14 @@ Define clear triggers for when the agent must stop and ask the human:
 | Forgets rules after context compression | Context window limitations | "Re-read instructions" rule at top of every instruction file |
 | Writes tests that only validate its own assumptions | Tests are generated from the same mental model as the code | Require tests to verify acceptance criteria commands from the story, not just exercise the implementation; human spot-checks edge cases |
 | Adds a new dependency without asking | Easiest path to solving the problem | Explicit escalation trigger: "new dependency required → ASK first" |
+| **Creates a parallel file alongside an existing anchor** when the LLD/epic said "extend" or "mirror" | Trap-phrases license duplication unless explicitly anchored to a file path; reviewers grade content, not shape | LLD §2.4 Existing-Primitive Map + per-story Existing-Primitive Analysis + reviewer `Shape:` line + filename-pair grep scan |
+| **Hardcodes a value that matches the config file** and dismisses the scan finding as "matches the YAML so it's safe" | Auto-justifying logic feels rigorous in the moment, but the literal will silently drift the next time config changes | Every hardcoded-config scan match is an explicit operator gate; no auto-justifying allowed |
+| **Patches a symptom instead of fixing the root cause** (retry loop, timeout bump, fallback default, cache extension to mask an intermittent failure) | Each patch looks like progress; root-cause analysis takes longer | Explicit anti-pattern list + `ARC REVIEW REQUIRED` escalation when the bug touches an architectural decision |
+| **Pivots when host operations fail** (sudo prompt, port collision, missing apt package) to a workaround that masks the issue | Pivoting feels productive; surfacing feels like a blocker | Surface-issues-don't-bypass rule; operator can fix host config in seconds, workarounds accumulate forever |
+| **Ignores "ignored / deprecated" warnings in tool output** because the field "has no runtime effect" | Decorative warnings feel cheap to leave; reading the warning carefully is expensive | Clean-logs rule: every warning is a defect; remove the inert artifact AND verify the actual enforcement is in place |
+| **Re-implements a primitive the off-the-shelf service already provides** (wrapping the OAuth flow, re-hashing passwords, mirroring identity tables) | Easier to write than to integrate; familiar pattern from training data | Native-primitive check required in every plan that touches the off-the-shelf domain |
+| **Trusts the tenant/account ID in the request body/path** as the source for the DB connection key | Path/body params look like the natural source | "Identifier from validated JWT/session claim only" rule + audit log on cross-account access attempts |
+| **Gates a logout/revoke endpoint on the access token** it's supposed to invalidate | Default thinking: "this endpoint needs auth, so use the bearer token" | Revocation-endpoint rule: authenticate via gateway session cookie / refresh token / public-rate-limited — never the credential being revoked |
 
 ### 12.2 Process Pitfalls
 
@@ -664,6 +780,9 @@ Define clear triggers for when the agent must stop and ask the human:
 5. **Verify verify verify.** The completion verification framework is the single highest-ROI practice in this guide.
 6. **Review is not optional — at any layer.** Agent-generated HLDs, LLDs, and epics look polished even when they contain wrong assumptions, missing failure modes, or acceptance criteria that don't actually prove anything. The more competent the output looks, the harder you must look for what's wrong. See §3.3.
 7. **Evolve your instruction files continuously.** Every new agent mistake is a rule waiting to be written. The team guide and agent instruction file should grow after every sprint based on violations found — see §4.5.
+8. **Reviewers grade content, not shape — unless you make them.** A reviewer that asks "is this file correctly implemented?" will pass a parallel duplicate of an existing file every time. Add a `Shape:` line requirement to every reviewer verdict + a filename-pair grep to the scan suite; otherwise duplication ships clean. See §10 in the agent instruction file.
+9. **Trap-phrases in LLDs are landmines.** "Mirrors existing X" / "wider input" / "same compute, new entry point" / "re-use as-is" — all of these implicitly say "extend the anchor" to a careful reader and "create a new file that looks like the anchor" to an LLM under time pressure. Require LLDs/epics to name the anchor by file path on the same line as any trap-phrase, and reject drafts that don't.
+10. **The PLAN-ONLY / IMPLEMENT-DRIVER / READ-ONLY-REVIEWER split is not bureaucracy.** Single-agent loops (one model proposes + writes + reviews) produce over-confident PASS verdicts on broken code because the same context that wrote the diff is grading it. The split forces the proposal to be readable enough for a separate context to act on, and gives the reviewer fresh eyes. Don't collapse the split because it feels slower — it isn't (parallel fan-out in §7.2 keeps wall-clock time low).
 
 ---
 
