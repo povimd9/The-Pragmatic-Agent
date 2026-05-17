@@ -56,4 +56,4 @@ When in doubt: config-derived. Cheaper to refactor a one-off back to a literal t
 
 ## Per-Language Scan Templates
 
-See [`scan-templates.md`](./scan-templates.md) for the hardcoded-config detection greps per language.
+See [`scan-templates.md`](./scan-templates.md) for sample hardcoded-config detection shapes. The literals shown there (ticker symbols, host names, decimal weights) are illustrative — substitute your project's actual config-derived values before running the scan in CI.

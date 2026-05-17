@@ -4,6 +4,8 @@
 
 *This document is loaded into your context at the start of every session. Every rule exists because its absence caused a real bug, integration failure, or wasted work. Follow them exactly.*
 
+*The version of this file in **The Pragmatic Agent** repo is a **reference template**. Teams adopting it are expected to calibrate every rule, scan, path, and command to their stack before treating the file as authoritative for their agents. "Follow them exactly" applies to your project's calibrated copy — not to the upstream template.*
+
 *Companion document: [**TEAM-GUIDE.md**](./TEAM-GUIDE.md) (for humans setting up and orchestrating AI-assisted development).*
 
 *Deep detail for specific rules lives in [**`modules/`**](./modules/). Load a module when the topic comes up in your work; the [module map](./modules/README.md) lists the trigger conditions.*
@@ -350,7 +352,7 @@ You operate within a structured story-by-story process. Your role depends on whe
 
 ### 13.1 Run Mandatory Scans
 
-Every story-completion run executes the scan suite below. Each match is reviewed INDIVIDUALLY (§3.5).
+Every story-completion run executes a scan suite covering the categories below. **The specific commands live in your project's calibrated scan file** (see [`modules/scan-templates.md`](./modules/scan-templates.md) for shapes to adapt). The mandate is that every category runs; the exact greps, AST queries, or linters are project-specific. Each match is reviewed INDIVIDUALLY (§3.5).
 
 | Scan category | What it catches |
 |---|---|
@@ -363,7 +365,7 @@ Every story-completion run executes the scan suite below. Each match is reviewed
 | **Forbidden-library scan** | Project-specific list of libraries that must not appear |
 | **Spec round-trip** (§8) | Wire-contract regeneration leaves zero diff vs the committed spec |
 
-**Concrete commands per language + run order:** [`modules/scan-templates.md`](./modules/scan-templates.md).
+**Sample commands and run order to adapt:** [`modules/scan-templates.md`](./modules/scan-templates.md). Do not copy these verbatim — calibrate the patterns, paths, and exclusions to your codebase before treating any output as authoritative.
 
 **Fan-out:** every scan runs in the SAME parallel batch as the reviewer agents (step d) — never chain serially.
 

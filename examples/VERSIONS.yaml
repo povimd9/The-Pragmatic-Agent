@@ -1,5 +1,10 @@
 # VERSIONS.yaml — Single Source of Truth for Component Versions
 #
+# THIS FILE IS A SAMPLE. The components, versions, and dates below
+# are illustrative (the fictional TaskFlow project). Replace entirely
+# with your project's actual components and pinned versions before
+# committing to your repo. The SHAPE travels; the contents do not.
+#
 # WHY THIS EXISTS:
 # AI agents' training data is outdated. This file prevents them from using
 # deprecated APIs, wrong config syntax, or features that don't exist in

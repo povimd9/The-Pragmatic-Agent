@@ -8,6 +8,21 @@
 
 ---
 
+## These Are Sample Shapes, Not Drop-in Scans
+
+Every grep below **demonstrates the technique for a scan category**; the literal patterns will produce noise on any real codebase without calibration. Before adopting any scan:
+
+- **Replace path globs** (`<files>`, `<modified_directories>`, `services/<svc>/`) with your project's actual paths.
+- **Tighten the regex** against your codebase's idioms — e.g., the Python `return None$` grep will fire on every legitimate optional return; narrow it to error-path proximity or replace with an AST-aware tool (`ast-grep`, `ruff` custom rules, `semgrep`).
+- **Add your project's domain-specific literals** (ticker symbols, role names, threshold values) to the hardcoded-config scan.
+- **Strip language sections you don't use.**
+
+A scan that produces hundreds of matches gets dismissed within a week — which is exactly the failure mode §3.5 warns against. Calibrate before deploying.
+
+The mandate that comes from the core rule is that every **category** runs in CI; the specific commands implementing each category are project-specific. Treat this module as a sample-shape catalog you'll fork once and then maintain alongside your codebase.
+
+---
+
 ## Universal Discipline
 
 - Run ALL scan categories every story-completion run; missing categories produce false-clean reports.
@@ -28,6 +43,8 @@ Every match is a violation. Either implement fully, or replace the comment with 
 
 ## Fail-Fast Scans
 
+*Sample patterns — calibrate to your codebase's actual error idioms.*
+
 ### Python
 
 ```bash
@@ -44,7 +61,11 @@ grep -rn "\.get(.*,\s*0)\|\.get(.*,\s*\"\")\|\.get(.*,\s*False)\|\.get(.*,\s*Non
 grep -rn "return 0$\|return 0\.0$\|return \[\]$\|return None$\|return \"\"$" <files> --include="*.py"
 ```
 
+> **Caveat on the silent-return grep.** This shape fires on every legitimate optional return. Use it only as a first-pass filter feeding human or LLM-reviewer judgment per §3.3, or replace with an AST-aware check that scopes to error-handling branches (`ast-grep`, `semgrep`, `ruff` custom rules). The **category** (silent-return-on-missing-data) is mandatory; this literal grep is not.
+
 ### Go
+
+*Sample patterns — calibrate to your codebase's actual error idioms.*
 
 ```bash
 # Suppressed panics
@@ -60,6 +81,8 @@ grep -rn '_ = ' <files> --include='*.go' | grep -v '_test.go'
 
 ### TypeScript / JavaScript
 
+*Sample patterns — calibrate to your codebase's actual error idioms.*
+
 ```bash
 # Empty catch blocks
 grep -rn 'catch.*{}' <files> --include="*.ts" --include="*.tsx" --include="*.js"
@@ -70,6 +93,8 @@ grep -rn '?? null' <files> --include="*.ts" --include="*.tsx"
 ```
 
 ### Rust
+
+*Sample patterns — calibrate to your codebase's actual error idioms.*
 
 ```bash
 # .unwrap() / .expect() in non-test files (each match needs review)

@@ -537,6 +537,8 @@ At minimum:
 
 #### Required Scan Categories
 
+The table lists **scan categories that every project running this discipline should cover.** The specific commands implementing each category live in your project's scan file — see [`modules/scan-templates.md`](./modules/scan-templates.md) for sample shapes to calibrate. The mandate is that every category runs; the exact greps / AST queries / linters are project-specific.
+
 | Scan | What it catches | Source |
 |---|---|---|
 | Placeholder scan | `TODO`, `FIXME`, "would implement" stubs | §4 (No Placeholders) |
@@ -772,7 +774,7 @@ Define automated scans that catch common agent mistakes. Run BEFORE any story is
 | Silent return scan | `return None`, `return 0` in error paths |
 | Clock domain scan | Using wrong time source |
 
-Provide the exact grep commands in the agent instruction file so there's no ambiguity about what to run.
+Provide the exact grep (or `ast-grep`, `semgrep`, linter-rule) commands in your project's agent instruction file so there's no ambiguity about what to run. The samples in [`modules/scan-templates.md`](./modules/scan-templates.md) show the *shapes*; calibrate them to your codebase before pinning them as the project's canonical commands. A scan that produces hundreds of false positives gets dismissed within a week; one that's tuned to your codebase catches what reviewers miss.
 
 ### 10.3 Runtime Verification
 
