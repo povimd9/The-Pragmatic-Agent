@@ -1,4 +1,4 @@
-# Agentic AI Development: Guide for Teams
+# The Pragmatic Agent — Team Guide
 
 ## Setting Up and Running AI-Assisted Software Development
 
@@ -24,6 +24,28 @@
 ---
 
 ## 1. Overview & Philosophy
+
+### The Operating Frame
+
+**Treat AI agents like specialized external contractors with no institutional memory and a habit of confident incorrectness.**
+
+That single frame generates every rule in this document. Contractors:
+- Don't remember your prior conversations (session-reset rules — re-read instructions).
+- Need explicit scope and acceptance criteria (epic + story structure).
+- Don't make architectural decisions for you (escalate-decisions-not-problems).
+- Produce work that looks plausible whether or not it's correct (verify-with-runtime-proof, shape-check the diff, content-plausibility checks).
+- Should not touch parts of the codebase outside the engagement (repository boundaries).
+- Need a reviewer who didn't write the code (PLAN-ONLY / IMPLEMENT-DRIVER / READ-ONLY-REVIEWER split).
+
+If you find yourself uncertain how to apply a rule, re-derive it from the frame: would you accept this from a freelancer who'd never seen the codebase before this morning? If no, the rule applies.
+
+### The Failure Mode to Watch — Silent Plausibility
+
+The most damaging output agents produce isn't crashes — it's **silent plausibility**: code, docs, or verdicts that look right and are wrong. A fallback value that hides a missing config. A parallel file that duplicates an existing anchor. A scan finding dismissed as "matches the YAML so it's safe." A reviewer verdict that grades content correctness without checking shape.
+
+Every rule in the agent instructions points at one variant of silent plausibility. The Agent Instructions [§0 map](./AGENT-INSTRUCTIONS.md#0-silent-plausibility--the-meta-anti-pattern) shows rule-by-rule which variant each one fights.
+
+The diagnostic question for any agent-produced artifact: **"Could this output be wrong in a way no one will notice?"** If yes, you're looking at silent plausibility; apply the relevant rule before shipping.
 
 ### Why This Approach
 
@@ -287,7 +309,7 @@ AI agents lose context through compression and across sessions. Your instruction
 
 ### 4.4 The Companion Agent Instruction File
 
-Alongside this team guide, maintain the companion document **[Agentic-AI-Agent-Instructions.md](./Agentic-AI-Agent-Instructions.md)**, which contains the actual rules loaded into the agent's context. The two files mirror each other:
+Alongside this team guide, maintain the companion document **[AGENT-INSTRUCTIONS.md](./AGENT-INSTRUCTIONS.md)**, which contains the actual rules loaded into the agent's context. The two files mirror each other:
 
 | Team Guide Section | Agent Instructions Section |
 |-------------------|--------------------------|
@@ -309,9 +331,13 @@ Instruction files are living documents. Every time an agent violates a rule that
 
 **Rule quality benchmark:** If you can show someone the rule and they could both identify a violation and fix it without asking follow-up questions, the rule is good. If not, it needs a code example or concrete scan command.
 
-#### Memory Files: Project-Scoped Persistent Rules
+#### Storing Your Rule Corpus: Three Patterns
 
-For platforms whose agents support a project-scoped memory (a directory of small markdown files loaded into context alongside the instruction file), prefer storing each new rule as **its own memory file** rather than appending to one ever-growing instructions file:
+The rule corpus can be organized three ways. Pick based on your model's context budget, how often you spawn narrow-scope sub-agents, and how heavy the rules' deep-detail content is. **This repo demonstrates Pattern C** (see `AGENT-INSTRUCTIONS.md` + the `modules/` directory).
+
+**Pattern A — Monolithic instruction file.** All rules + their deep detail live in one document, loaded in full at session start. Simplest to author and read end-to-end; works well on modern models with multi-hundred-thousand-token context windows; readers can grep / scroll the whole rule set in one place.
+
+**Pattern B — Per-rule memory files.** Each rule lives in its own short markdown file under a memory directory, indexed by a one-line-per-entry index:
 
 ```
 .agent-memory/
@@ -325,13 +351,29 @@ For platforms whose agents support a project-scoped memory (a directory of small
 
 Each memory file is **named for the rule**, opens with a one-line description usable in the index, and contains: (a) the rule itself, (b) a `Why:` line citing the past incident that triggered it, (c) a `How to apply:` block with concrete grep commands or code patterns.
 
-This pattern survives context compression better than a 5,000-line instructions file: the index stays in view, and the agent loads only the relevant memory files when their topics come up. Update or remove memories that turn out to be wrong; never let a stale memory linger.
+**Pattern C — Core + modules (the hybrid).** A short core file holds every rule's WHAT + one-or-two-sentence WHY + a pointer to a topic-named module that holds the deep detail. Modules open with a **"Load when:"** trigger that names the conditions for loading. The core is always in context; modules are loaded on demand when their topic comes up in your current task.
 
-#### Naming Discipline: One Rule per File, Indexed
+```
+AGENT-INSTRUCTIONS.md     # core: rule statements + module pointers
+modules/
+  README.md                # module map (load-when table)
+  no-parallel-implementations.md
+  hardcoded-config.md
+  content-validation.md
+  ...
+```
 
-- One rule = one file. Don't bundle "fail-fast" and "no-parallel-implementations" into one file just because they're both anti-patterns.
-- The index (`MEMORY.md`) is a single-line-per-entry pointer; the body lives in the named file.
-- Memory file names are descriptive (`feedback_no_parallel_implementations.md`), not date-stamped — the rule outlives the incident that prompted it.
+Each module is **named for the topic**, opens with a `Load when:` line, and contains the deep detail (worked examples, anti-pattern catalogs, decision procedures, grep commands).
+
+#### Pattern Selection
+
+| Use Pattern | When |
+|---|---|
+| **A — Monolithic** | Your rule set is small (under ~500 lines), your model's context budget is generous, and you don't spawn narrow-scope sub-agents. Simplest to maintain. |
+| **B — Per-rule memory** | Your model's context is tight relative to the rule corpus (older models, very large rule sets), OR you spawn narrow-scope sub-agents that should load just the rules relevant to their task. |
+| **C — Core + modules** | Your rule set is large enough that a monolith is unwieldy AND your readers want a tight "what are the rules?" overview separate from the deep-detail content (e.g., a public-facing template). Authors split content along the "what / how / why" seam: WHAT in core, HOW and WHY in modules. |
+
+Whichever pattern you pick, the discipline is the same: one rule = one logical unit (file or section), named for the rule, with a `Why:` line citing the past incident and a `How to apply:` block. Update or remove rules that turn out to be wrong; never let a stale rule linger.
 
 ---
 
@@ -407,6 +449,34 @@ Each agent definition file should contain:
 ## Authority
 [BLOCKING / ADVISORY / DEVELOPMENT / RESEARCH]
 ```
+
+### 5.4 Token / Cost Budgets and Model Selection
+
+Agent runs cost real money and real wall-clock time. Without a budget, projects drift toward "always use the biggest model" — which is both wasteful for small tasks and underpowered for hard ones (because the human stops trusting any single answer when they're equally expensive). Pick the model by task shape, not by habit.
+
+**Rough model-selection-by-task table (Anthropic stack; adapt names for your provider):**
+
+| Task shape | Recommended model tier | Why |
+|---|---|---|
+| One-shot rule-statement lookup; index/grep across an instruction file | Smallest fast model (e.g., Haiku) | High signal-to-noise; long context not load-bearing; speed matters more than depth |
+| Sanity-check of a plan against a story's ACs; small diff review | Mid-tier (e.g., Sonnet) | Needs reasoning to spot contradictions, but doesn't need the deepest model |
+| Architectural plan generation; LLD authoring; reviewer fan-out on a multi-file diff; design-pipeline output | Top-tier (e.g., Opus) | Worth the cost — design errors compound 5x downstream |
+| Routine code edit following an approved plan | Mid-tier | The hard thinking happened at plan time; execution is mechanical |
+| Long-context investigation (cross-repo search, multi-file refactor planning) | Top-tier with extended context window | The cost of getting it wrong (missing a callsite) dwarfs the model cost |
+
+**Per-epic cost budget — three layers worth tracking:**
+
+1. **Per-story budget:** rough $-or-token ceiling per story. If a story routinely blows it, the story is too large (§7.3) or the model choice is wrong.
+2. **Per-epic budget:** sum of expected story costs + design overhead. Recompute after each story to catch drift.
+3. **Recovery budget:** how much you're willing to spend on a failed-verification rework before escalating to "this story needs a different model / different approach."
+
+**When prompt caching pays:**
+- **YES:** repeated runs against the same large instruction file or codebase context (story execution within an epic, design-pipeline iterations against a stable HLD). Cache hits cut input cost ~10x.
+- **NO:** one-shot lookups, conversations with rapidly-changing context (debugging sessions that jump across files), one-off plan generation.
+
+The discipline is to *think about which* tier each invocation needs, not to default to the biggest one. Most projects find ~70% of agent calls can run on mid-tier without quality loss — meaningful wall-clock and cost savings.
+
+**Watch-out: cost as a paper-over.** When verification fails and the temptation is "let me try the bigger model and see if it gets it right" — that's a §11.1 (root cause not symptoms) instance dressed as a model-selection decision. The bigger model might shortcut to a correct answer, but it doesn't fix the prompt / context / story-shape problem that produced the wrong answer the first time.
 
 ---
 
@@ -581,6 +651,21 @@ When multiple agents (or parallel sessions) are active on the same project, coor
 
 **When multiple agents are blocked on the same dependency:** That's a sequencing error in epic design. Restructure to eliminate the dependency or serialize the dependent stories.
 
+### 7.5 Rules by Diff Size — Scaling Down
+
+The full story-cycle scaffolding (plan agent → sanity-check → implement → reviewer fan-out + `Shape:` line + per-story PR) is calibrated for multi-file feature work. For a typo fix or a one-line config tweak, it's friction theater. Use this table to pick the right ceremony.
+
+| Diff size | Examples | Required ceremony |
+|---|---|---|
+| **Trivia (1 file, ≤5 lines, no logic change)** | typo fix, comment edit, version-string bump that VERSIONS.yaml already pre-approved | Direct commit on a one-line PR; reviewer is a human eyeball; skip the plan agent, skip the `Shape:` line, skip the Existing-Primitive Analysis. Mandatory: still no force-push to main; still spec-compliance if it touches a wire field. |
+| **Small (1 file, contained edit, logic change)** | bug fix in one function, new helper, small refactor inside one file | Plan agent OPTIONAL (a one-paragraph plan in the PR description suffices). Reviewer fan-out reduced to one reviewer + relevant static-scan. `Shape:` line still required IF the diff adds a new function — confirm it's not duplicating an existing helper. |
+| **Multi-file feature (2-7 files, one story scope)** | full story implementation per epic | Full ceremony per §7.1 — plan agent produces Existing-Primitive Analysis + per-AC plan; full reviewer fan-out + `Shape:` line + CI/test/static-scan in parallel batch; one PR per story. |
+| **Epic-level (multiple stories, several days of work)** | new component, large feature, migration | All multi-file ceremony PLUS: design-pipeline gate (HLD/LLD approved + signed off before story 0 begins) PLUS end-of-epic runtime integration test before the next epic starts. |
+
+**Scaling-down isn't permission to skip thinking.** Even at trivia tier, the no-placeholders / no-silent-fallback / spec-compliance / fail-fast rules still apply — those are language-level invariants, not ceremony. What scales down is the *process* (plan agent, formal review, Shape line); the *invariants* are unchanged.
+
+**Common scaling mistake to catch:** "It's just a small fix" used as the justification for an unjustified parallel file. Diff size is no excuse to ship a duplicate of an existing function — §10 applies at every tier.
+
 ---
 
 ## 8. Epic & Story Template Design
@@ -705,6 +790,44 @@ Require a structured completion report with:
 - Build/deploy: proof of successful build and deployment
 - Files modified: list with line counts
 
+### 10.6 Test Design — Beyond Verification Commands
+
+Verification commands (above) prove acceptance criteria are met. Test design is broader: what's the right *mix* of tests at each layer for the codebase you're building?
+
+The verification framework gets you to "this story passes" — the test pyramid below gets you to "the next story doesn't break this one."
+
+**Test pyramid — rough ratios to aim for:**
+
+| Layer | Share of test count | What it covers | Speed budget |
+|---|---|---|---|
+| Unit | ~70% | One function/class in isolation; mocks at the module boundary | <50ms per test |
+| Integration | ~20% | Multiple modules together, real DB / message broker / HTTP client; mocks at the system boundary | <2s per test |
+| End-to-end | ~10% | Full user-facing scenario through the deployed system; no mocks | <30s per test |
+
+The ratios aren't sacred — a thin orchestration service skews toward integration; a CPU-heavy library skews toward unit. The important rule is: **never invert the pyramid.** A test suite that's 70% e2e and 10% unit is slow, flaky, and gives weak per-feature feedback.
+
+**Per-layer discipline:**
+
+- **Unit tests** should run faster than your editor's save hook. If they don't, mocks are too heavy or the system under test is over-coupled.
+- **Integration tests** use REAL external dependencies (test containers, ephemeral DBs) — not mocks. The whole point is to catch wiring bugs mocks can't.
+- **End-to-end tests** are precious. Each one represents a user journey worth protecting. Resist the urge to write 50; write the 5 that hurt most when broken.
+
+**Mutation testing — when to invest.** Mutation testing flips one line at a time and re-runs your test suite, scoring how many mutations the suite catches. It surfaces tests that exercise code without asserting behavior. Useful when:
+- A test suite has 90%+ line coverage but bugs still ship → mutation score will reveal "tests exercise but don't assert" patterns.
+- You're hardening a safety-critical or compliance-bearing module → mutation testing tells you which tests are actually load-bearing.
+
+Not useful when: your suite is small enough that human review catches assertion-quality issues, or your business logic is so straightforward that mutations are obviously wrong.
+
+**Fixture discipline:**
+
+- Treat test fixtures as production data. A fixture with `tenant_id: "1"` and another with `tenant_id: 1` (string vs int drift) is a real bug-source.
+- Generate fixtures programmatically from the same schema your production code uses; don't hand-roll them per test.
+- A test that ONLY runs because of a hand-rolled fixture is a test that won't survive the next schema change.
+
+**Test-as-spec, not test-as-snapshot.** A test should fail when the *behavior* changes, not when the *implementation* changes. If a refactor that preserves behavior breaks tests, the tests are over-specified — they're snapshotting implementation details. Snapshot tests are particularly prone to this; use them only for output that's genuinely the spec (rendered HTML for a marketing page, generated SQL for a migration).
+
+**Tests that validate the agent's own assumptions.** Agents generate tests from the same mental model as the code; the test will agree with the code even when both are wrong. Counter this by: (a) requiring tests that pre-date the implementation when possible (TDD where it fits); (b) human spot-checks of edge cases the agent didn't generate; (c) cross-checking acceptance criteria against the test suite — if a story's AC isn't directly tested, the suite has a coverage gap regardless of line-coverage percentage.
+
 ---
 
 ## 11. Escalation Framework
@@ -786,4 +909,4 @@ Define clear triggers for when the agent must stop and ask the human:
 
 ---
 
-*This guide is designed to be adapted. Remove what doesn't apply to your project, add your domain-specific rules, and evolve it as you learn what your agents get wrong. Use agents at every layer — design, planning, implementation, review — and reserve human effort for what only humans can do: providing direction, making decisions, and owning the outcome. The companion document, **[Agentic-AI-Agent-Instructions.md](./Agentic-AI-Agent-Instructions.md)**, contains the rules that get loaded into agent context — maintain them in parallel.*
+*This guide is designed to be adapted. Remove what doesn't apply to your project, add your domain-specific rules, and evolve it as you learn what your agents get wrong. Use agents at every layer — design, planning, implementation, review — and reserve human effort for what only humans can do: providing direction, making decisions, and owning the outcome. The companion document, **[AGENT-INSTRUCTIONS.md](./AGENT-INSTRUCTIONS.md)**, contains the rules that get loaded into agent context — maintain them in parallel.*
