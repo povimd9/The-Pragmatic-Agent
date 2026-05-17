@@ -90,6 +90,13 @@ try {
 - NO "Option A / Option B" left unresolved — pick one and document WHY.
 - During implementation: follow the epic exactly. If unclear: STOP > ASK > UPDATE EPIC > CONTINUE.
 
+### 9. NO PARALLEL IMPLEMENTATIONS — Extend Existing Anchors (HARD RULE)
+- Every story in this epic that produces ANY artifact (file / function / package / component / hook / endpoint / migration) MUST fill out the per-story **Existing-Primitive Analysis** table below.
+- Trap-phrases ("mirrors X", "wider input to X", "same compute new entry point", "re-use X as-is", "extends X", "alongside X", "parallel to X", "shares the structure of X") MUST name the anchor X **by file path** on the same line.
+- The default action is **extend the anchor in place**. Parallel files / packages / components / hooks alongside an existing anchor are violations EVEN IF the new artifact is otherwise correctly implemented — the bug is that the new artifact EXISTS.
+- Net-new artifacts MUST be justified under the narrow-exception list (genuinely different domain / distinct lifecycle entry point / no meaningful shared code post-extraction). Even under a justified exception, business logic MUST live in a single internal package both call — NEVER copy-pasted.
+- Plans missing the Existing-Primitive Analysis table OR reviewer verdicts missing a `Shape:` line are rejected.
+
 ---
 
 ## Domain Separation Requirement
@@ -133,6 +140,14 @@ Multi-domain epics must be split. Different teams work on different domains with
 **I want** <capability>
 **So that** <business value>
 
+**Existing-Primitive Analysis (HARD RULE — fill BEFORE implementation):**
+
+For every artifact this story produces (file / function / package / component / hook / endpoint / migration), name its existing anchor — OR justify net-new under the narrow-exception list. Trap-phrases without a file-path anchor are violations.
+
+| Proposed Artifact | Action | Existing Anchor (file:line) | Diff Shape / Net-new Justification |
+|-------------------|--------|-----------------------------|------------------------------------|
+| `src/<path>/<file>` (or function name) | extend / extend-in-place / net-new | `src/<path>/<anchor>:L<line>` OR "net-new" | "Adds `<param>` at function entry; branches at L<line>" / "Net-new: <one-paragraph narrow-exception justification>; shared logic lives in `src/<path>/<core>/`" |
+
 **Acceptance Criteria (with Verification Commands):**
 
 | # | Criterion | Verification Command | Expected Output |
@@ -157,6 +172,14 @@ Multi-domain epics must be split. Different teams work on different domains with
 **As a** <role/component>
 **I want** <capability>
 **So that** <business value>
+
+**Existing-Primitive Analysis (HARD RULE — fill BEFORE implementation):**
+
+For every artifact this story produces (file / function / package / component / hook / endpoint / migration), name its existing anchor — OR justify net-new under the narrow-exception list. Trap-phrases without a file-path anchor are violations.
+
+| Proposed Artifact | Action | Existing Anchor (file:line) | Diff Shape / Net-new Justification |
+|-------------------|--------|-----------------------------|------------------------------------|
+| `src/<path>/<file>` (or function name) | extend / extend-in-place / net-new | `src/<path>/<anchor>:L<line>` OR "net-new" | "Adds `<param>` at function entry; branches at L<line>" / "Net-new: <one-paragraph narrow-exception justification>; shared logic lives in `src/<path>/<core>/`" |
 
 **Acceptance Criteria (with Verification Commands):**
 

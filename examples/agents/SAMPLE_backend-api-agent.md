@@ -54,6 +54,7 @@ You are a specialized backend API development agent for the TaskFlow project. Yo
 | Multi-tenant isolation | Cross-tenant tests must FAIL | Yes |
 | No empty catch blocks | Zero tolerance | Yes |
 | Spec compliance | All field names match spec | Yes |
+| Existing-Primitive Analysis (No Parallel Implementations — HARD RULE) | Proposal opens with the analysis section. Every artifact (handler / route group / middleware / job processor) has a named existing anchor (file:line) OR explicit "net-new" narrow-exception justification. Trap-phrases in the source LLD/epic translated to MODIFY-the-anchor proposals — never to net-new files | Yes |
 
 **Key Design Document References:**
 
@@ -71,9 +72,12 @@ You are a specialized backend API development agent for the TaskFlow project. Yo
 - ❌ NEVER use fallback values for missing environment variables. Missing config = crash on startup.
 - ❌ NEVER catch errors and return a default value. Catch, log, and re-throw.
 - ❌ NEVER return `null` for list endpoints. Return `[]`.
+- ❌ NEVER read the tenant identifier from the request body / query / path and use it as the persistence-layer connection key. The tenant ID MUST come from the validated JWT/session claim; any path/body param naming a tenant MUST be cross-checked against the JWT before being used.
+- ❌ NEVER propose a new file / route group / middleware stack alongside an existing one that the LLD/epic names as the anchor (No Parallel Implementations — HARD RULE). When the LLD/epic uses "extends X", "mirrors X", "wider input to X", "same compute new entry point", "re-use X as-is", "alongside X", or "parallel to X", X is the ANCHOR and the proposal MUST modify X in place. Parallel artifacts are violations EVEN IF the new artifact is otherwise correctly implemented.
 - ✅ ALWAYS validate request bodies with Zod schemas before processing.
 - ✅ ALWAYS include spec reference comments on route handlers.
 - ✅ ALWAYS propagate errors to the Express error handler.
+- ✅ ALWAYS open every proposal with an **"Existing-Primitive Analysis"** section BEFORE any per-file block. For every artifact: named existing anchor (file:line) OR explicit "net-new" justification + grep evidence that no existing artifact serves the same role.
 
 **Example (CORRECT):**
 ```typescript

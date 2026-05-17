@@ -113,6 +113,11 @@ Use this checklist after copying the templates into your own project:
 - [ ] Your instruction file explicitly tells the agent to re-read instructions at session start or after compression.
 - [ ] Your fail-fast section includes concrete scan commands for the patterns you consider forbidden.
 - [ ] Your `VERSIONS.yaml` matches the versions actually pinned in your codebase and deployment tooling.
+- [ ] Every LLD includes an **Existing-Primitive Map** (§2.4) — every artifact has a named existing anchor (file:line) OR explicit narrow-exception justification.
+- [ ] Every epic story carries an **Existing-Primitive Analysis** table filled in before implementation.
+- [ ] Every reviewer agent's verdict requires an opening `Shape:` line (parallel-implementation detection).
+- [ ] Your CI scan suite includes filename-pair detection (e.g., `<Prefix>Foo.tsx` next to `Foo.tsx`) and a trap-phrase audit on LLDs/epics ("mirrors", "wider input", "same compute", "re-use as-is" without a file-path anchor).
+- [ ] Your CI runs the language-appropriate static-scan baseline (shellcheck / yamllint / `go vet` / `tsc --noEmit` / linter) on every PR — these are mandatory, not optional polish.
 - [ ] Every epic references the relevant LLD sections with line numbers.
 - [ ] Every story acceptance criterion includes a runnable verification command with observable output.
 - [ ] Design or epic decisions that required human judgment are recorded with rationale instead of being left implicit.
@@ -121,13 +126,17 @@ Use this checklist after copying the templates into your own project:
 
 ## Core Philosophy
 
-These guides are built on five principles learned the hard way:
+These guides are built on principles learned the hard way:
 
 1. **Design before implementation.** Agents execute plans well. They make architectural decisions poorly.
 2. **One story at a time.** Agents lose coherence across large scopes.
 3. **Verify everything.** "It compiles" is necessary but insufficient.
 4. **Fail-fast, never fail-silent.** The most damaging bugs are silent fallbacks, not crashes.
 5. **Escalate decisions, not problems.** Agents implement; humans decide.
+6. **Extend existing anchors; never fork parallel implementations.** When an LLD/epic says "extends X" or "mirrors X" or "same compute, wider input", the work modifies X in place. Parallel files alongside an anchor are violations even when otherwise correct.
+7. **Reviewers must grade shape, not just content.** A reviewer that asks "is this file correctly implemented?" passes parallel duplicates every time. Every reviewer verdict opens with a `Shape:` line.
+8. **Fix root causes, not symptoms.** No retry loops, no timeout bumps, no fallback defaults, no cache extensions to mask reported bugs. If you can't fix the root cause, label the fix "mitigation" explicitly.
+9. **Surface issues; don't bypass.** Host operation failures, deprecation warnings, "ignored" config fields — every one is a defect. Workarounds accumulate forever; the operator can fix host config in seconds.
 
 ---
 

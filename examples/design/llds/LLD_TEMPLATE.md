@@ -42,6 +42,52 @@
 |------------|---------|---------|
 | <Library/service> | <version from VERSIONS.yaml> | <why needed> |
 
+### 2.4 Existing-Primitive Map (No Parallel Implementations — HARD RULE)
+
+**Every artifact this LLD adds MUST be named with its anchor** — the
+existing file/function/package/component it extends. The agent rule
+"No Parallel Implementations" (see Agent Instructions §3.X) translates
+to a documentation requirement here: trap-phrases ("mirrors X", "wider
+input to X", "same compute new entry point", "re-use X as-is",
+"extends X", "alongside X", "parallel to X", "shares the structure
+of X") MUST name the anchor BY FILE PATH on the same line.
+
+Net-new artifacts MUST be justified under the narrow-exception list
+(genuinely different domain / distinct lifecycle entry point with a
+shared internal package / no meaningful shared code post-extraction)
+AND state where the shared business logic lives if ANY logic is
+shared with an existing artifact.
+
+LLDs missing this table — OR using trap-phrases without an anchor
+file path — should be rejected at LLD review. The implementer-agent
+that later picks up the epic inherits this table as the basis for its
+own per-story Existing-Primitive Analysis; if this table is missing
+or ambiguous, the downstream implementation plan is impossible to
+write correctly.
+
+| Proposed Artifact | Action | Existing Anchor (file:line) | Diff Shape / Net-new Justification |
+|-------------------|--------|-----------------------------|------------------------------------|
+| `src/path/file.ext` (or function name) | extend / extend-in-place / net-new | `src/path/anchor.ext:L123` OR "net-new" | "Adds `scope` parameter at function entry; branches at line L45" / "Net-new: distinct lifecycle entry point (HTTP handler vs batch worker); shared logic lives in `src/path/core/`" |
+
+**Worked example (anonymized):**
+
+A multi-account feature adds a "portfolio view" that aggregates per-
+account data. The LLD says "Feeds the existing analysis engine ONE
+combined input vector (same compute, just a wider input)."
+
+| Proposed Artifact | Action | Existing Anchor | Diff Shape |
+|-------------------|--------|-----------------|------------|
+| Portfolio analysis entry | extend-in-place | `src/analysis/engine.ts:155` | Add `analyzePortfolio(input)` top-level function in SAME file delegating to internal `analyzeCore` which accepts a holdings vector; `analyzeAccount(account)` and `analyzePortfolio(portfolio)` both call `analyzeCore`. NO parallel `portfolio.ts`. |
+| Portfolio dashboard render | extend-in-place | `src/web/pages/Dashboard.tsx:200` | Add `scope?: "account" \| "portfolio"` prop; branch hook selection at line top; route table mounts the same component for both `/accounts/:uuid/dashboard` and `/portfolios/:uuid/dashboard`. NO new file. |
+
+**Forbidden shape** (what real projects ship when this table is
+missing): a separate `PortfolioDashboard.tsx` next to `Dashboard.tsx`
+(near-clone with one swapped hook), a separate `portfolio.ts` next to
+`engine.ts` (parallel orchestrator re-implementing fan-out logic).
+Every reviewer that grades the new file in isolation passes it
+because the file IS correctly implemented — the bug is that it exists
+at all.
+
 ---
 
 ## 3. Interfaces and Contracts
