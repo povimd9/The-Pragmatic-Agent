@@ -97,14 +97,11 @@ Expected outcome: the agent starts each session with explicit fail-fast rules, k
 
 ---
 
-## Content Review Snapshot
+## Scope
 
-This repo content has been reviewed against four quality dimensions:
+This is **Claude-Code-shaped operational discipline.** The concepts (design-pipeline, story-cycle, fail-fast, no-parallel-implementations, silent-plausibility as the meta-anti-pattern, etc.) port to any agent platform; the tooling assumptions (`.claude/agents/`, `CLAUDE.md`, multi-agent fan-out via subagents, the model-tier naming) are written for the Anthropic stack.
 
-- **Completeness:** Includes team playbook, agent rulebook, and end-to-end templates/samples for design, stories, versions, and agent roles.
-- **Coverage:** Spans setup, planning, implementation workflow, validation gates, escalation, and common failure patterns.
-- **Sanity:** Companion documents are cross-referenced and aligned around the same fail-fast and verification-first operating model.
-- **Agnostic Usage:** Guidance is intended for any agent-enabled workflow; `CLAUDE.md` paths in examples are illustrative and can be mapped to your platform's instruction-file convention.
+If you're on a different platform (Codex, Cursor, Aider, Copilot CLI, Gemini CLI, custom orchestration on the Anthropic SDK), the framework applies — you'll just translate `.claude/agents/` to whatever your platform uses for agent definitions, `CLAUDE.md` to your platform's instruction-file convention, and "subagents" to whatever spawning primitive your runtime exposes. Don't expect platform parity out of the box; do expect the concepts to land.
 
 ### Verifying Your Adaptation
 

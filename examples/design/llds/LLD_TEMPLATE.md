@@ -46,7 +46,7 @@
 
 **Every artifact this LLD adds MUST be named with its anchor** — the
 existing file/function/package/component it extends. The agent rule
-"No Parallel Implementations" (see Agent Instructions §3.X) translates
+"No Parallel Implementations" (see Agent Instructions §10) translates
 to a documentation requirement here: trap-phrases ("mirrors X", "wider
 input to X", "same compute new entry point", "re-use X as-is",
 "extends X", "alongside X", "parallel to X", "shares the structure

@@ -10,6 +10,7 @@
 
 ## Table of Contents
 
+0. [Silent Plausibility — The Meta-Anti-Pattern](#0-silent-plausibility--the-meta-anti-pattern)
 1. [Session & Context Management](#1-session--context-management)
 2. [Version & API Trust](#2-version--api-trust)
 3. [Fail-Fast Philosophy](#3-fail-fast-philosophy)
@@ -24,6 +25,46 @@
 12. [Your Role in Story Execution](#12-your-role-in-story-execution)
 13. [Completion Verification](#13-completion-verification)
 14. [When to Escalate](#14-when-to-escalate)
+
+**Appendices (optional deep detail — load when the topic comes up):**
+
+- [Appendix A: Container Image Selection Protocol](#appendix-a-container-image-selection-protocol)
+- [Appendix B: Per-Story Branch + PR + Merge Sequence](#appendix-b-per-story-branch--pr--merge-sequence)
+- [Appendix C: Language-Specific Scan Templates](#appendix-c-language-specific-scan-templates)
+
+---
+
+## 0. Silent Plausibility — The Meta-Anti-Pattern
+
+**Almost every rule in this document fights one underlying failure mode: silent plausibility.**
+
+Silent plausibility is the family of agent-produced artifacts that look right and are wrong. The output passes a casual read, fails a careful one. Examples:
+
+- A fallback value that hides a missing config (looks like a default; actually masks a startup-failure bug).
+- A parallel file that duplicates an existing anchor (looks like a feature; actually a maintenance bomb that drifts).
+- A scan finding dismissed as "matches the YAML so it's safe" (looks like rigorous review; actually license to ignore the rule next time).
+- A retry loop wrapped around an intermittent failure (looks like reliability engineering; actually a paper-over fix).
+- A completion report citing a green build with no content-plausibility check (looks like verification; actually says nothing about correctness).
+- A reviewer verdict that grades content correctness without checking shape (looks thorough; actually blind to the bug that the file shouldn't exist).
+
+Crashes are loud and easy. Silent plausibility is the dangerous mode — it ships, the user trusts it, and the bug surfaces weeks later when a config edit or scope change exposes it.
+
+**Map of rules → which silent-plausibility variant each one fights:**
+
+| Rule | Variant it fights |
+|---|---|
+| §3 Fail-Fast | Silent fallback values in error paths |
+| §3.5 Reviewing Scan Results | Auto-justified scan dismissals |
+| §3.6 No Hardcoded Config | "Matches the YAML so it's safe" |
+| §3.7 Validate CONTENT | 200-OK-but-NaN responses |
+| §4 No Placeholders | TODO stubs that look like working code |
+| §10 No Parallel Implementations | New files that duplicate an anchor |
+| §11.1 Fix Root Causes Not Symptoms | Retry/timeout/fallback patches that mask the real bug |
+| §11.3 Logging Gap ≠ Didn't Happen | Absent log line treated as proof the event didn't occur |
+| §12 Reviewer `Shape:` line | Content-correct verdicts on shape-broken diffs |
+| §13.2 Verification ≠ HTTP 200 | Green-build claims that say nothing about correctness |
+
+When in doubt, the question is: **"Could this output be wrong in a way no one will notice?"** If yes, you're in silent-plausibility territory — apply the relevant rule before shipping.
 
 ---
 
@@ -63,21 +104,11 @@ CORRECT: Check the project's version file, fetch current docs, read existing cod
 - Using deprecated API patterns from training data.
 - Assuming features exist in the pinned version that were added later.
 
-### 2.1 Container Image Selection — Official-First, Build-Local Otherwise
+### 2.1 Container Image Selection (summary)
 
-For every external dependency you propose to run as a container (database, message broker, identity provider, headless browser, reverse proxy, etc.), pin the image deterministically — no guessing, no `library/<name>:latest`, no Docker-Hub-search heuristics.
+Pin every container image deterministically — no `latest`, no Docker-Hub-search heuristics. Verify maintainership at the **vendor's official source-of-truth site** (not Docker Hub alone) and prefer LTS over latest-stable. If the image isn't officially maintained, build a local Dockerfile FROM a minimal distro. Record the choice in your version pin file with a notes line citing the URL that confirmed it.
 
-1. **Verify at the project's OFFICIAL source-of-truth site** (the vendor's docs / release-notes page) — NOT Docker Hub alone. The "Docker Official Image" badge is necessary but not sufficient.
-2. **If officially maintained:** pin the latest **LTS** `major.minor.patch` from the project's release page; if no LTS, latest stable (exclude `-rc` / `-alpha` / `-beta`).
-3. **If NOT officially maintained:** build your own Dockerfile FROM a minimal distro (`alpine:<pin>`, `gcr.io/distroless/static-nonroot`, etc.) following the project's install/build guide. The Dockerfile lives under `services/<svc>/Dockerfile` (multi-stage, non-root, read-only-rootfs).
-4. **Record in your version pin file** with a notes line citing the official-page URL that confirmed maintainership + the LTS/stable choice.
-
-**Web-fetch tool ladder** when verifying (fastest → most expensive):
-1. `wget` / `curl -fsSL` via your shell tool — clean pass/fail, cheap.
-2. Structured fetch tool (HTML → summary) — when the page is JS-light.
-3. Headless browser navigation — last resort only when 1 and 2 both fail (504, JS-rendered SPA, anti-bot CDN, login wall).
-
-If all three fail, STOP-ASK with the tool sequence + a fallback proposal (e.g., pin from a signed release-notes URL directly). NEVER pivot to an unverified tag to "make it work."
+**Full protocol with the verification ladder is in [Appendix A](#appendix-a-container-image-selection-protocol).**
 
 ---
 
@@ -136,15 +167,29 @@ if not calibration_complete:
 
 ### 3.3 `return None` Rules
 
-**Valid uses of `return None`:**
-1. Lookup/search that may legitimately find no match (e.g., `get_item_by_name`).
-2. Correct semantic result (e.g., optional enrichment data not available).
+§3.1 forbids "silent return on missing data"; this section names the narrow cases where `return None` IS legitimate. The two rules conflict on the surface — the decision procedure below resolves them.
+
+**Decision procedure — for any `return None` you're about to write, ask:**
+
+> "What does the caller treat `None` as — a legitimate empty result, or a signal that something it needed is missing?"
+
+- **Legitimate empty result** (`None` = "I looked, there was nothing") → `return None` is valid. The caller checks for `None` and handles it as a real outcome.
+- **Missing-required-data signal** (`None` = "I couldn't get what you asked for") → `return None` is FORBIDDEN. Raise instead, so the caller can't silently treat the gap as a success.
+
+If you can't answer the question with certainty about every caller, treat it as the second case (raise). The first case requires evidence — a documented contract or callsite review — not a hunch.
+
+**Valid uses of `return None`** (legitimate-empty-result):
+1. Lookup/search that may legitimately find no match (e.g., `get_item_by_name`). The caller's contract is "may or may not exist."
+2. Optional enrichment data not available. The caller's contract treats enrichment as best-effort.
 3. Test/diagnostic scripts, not production data paths.
 
-**NEVER valid uses of `return None`:**
-1. Preconditions not met (sync, calibration, warmup) — gate the pipeline instead.
+**NEVER valid uses of `return None`** (missing-required-data signals — each is a silent-plausibility instance, §0):
+1. Preconditions not met (sync, calibration, warmup) — gate the pipeline at activation time instead.
 2. Hardware failure without consecutive error tracking — track and declare dead.
 3. Missing data in a required data path — raise or close the gate.
+4. External call failed (network, vendor 5xx, parse error) — raise; the caller's contract is "the data is here" and `None` masks that broken contract.
+
+**When in doubt:** raise. It's cheap to switch to `return None` later when you've confirmed the contract; it's expensive to find every silent-return downstream after a bug ships.
 
 ### 3.4 Forbidden Rationalizations
 
@@ -509,15 +554,8 @@ You operate within a structured story-by-story process. Your role depends on whe
 - Verify each acceptance criterion with the specified command and capture actual output.
 
 ### When BRANCHING + COMMITTING + MERGING (step f):
-- **Per-story feature-branch + PR flow (HARD RULE).** Each story lands as its own atomic commit on its own branch, opened as a PR, merged (or rebased — operator chooses), then the branch is deleted.
-- Sequence:
-  1. `git fetch origin && git switch -c <epic-NN-story-X.Y> origin/main` from a clean tree.
-  2. Commit the story atomically on the branch (`EPIC_NN Story X.Y: ...` message + reviewer-verdict citation). NEVER batch multiple stories into one commit.
-  3. `git push -u origin <branch>`.
-  4. Open the PR (`gh pr create --base main --head <branch> ...`); body includes reviewer verdicts + tracker row link.
-  5. Merge (`gh pr merge --merge --delete-branch`). If conflicts surface, RESOLVE on the feature branch — NEVER `--force`, NEVER `reset --hard main`.
-  6. `git switch main && git pull --ff-only && git fetch origin --prune`.
-- **NEVER push directly to `main`.** The audit trail is per-story-per-PR.
+- **Per-story feature-branch + PR flow (HARD RULE).** Each story lands as its own atomic commit on its own branch, opened as a PR with reviewer verdicts cited in the body, merged cleanly, then the branch is deleted. NEVER push directly to `main`. NEVER batch multiple stories into one commit.
+- **Full command sequence is in [Appendix B](#appendix-b-per-story-branch--pr--merge-sequence).**
 
 ### Workflow Rules:
 - **One story at a time.** Complete fully before starting the next.
@@ -533,79 +571,20 @@ You operate within a structured story-by-story process. Your role depends on whe
 
 ### 13.1 Run Mandatory Scans
 
-```bash
-# Placeholder/TODO scan — fix ALL matches in code you wrote or modified
-grep -rn "placeholder\|TODO\|FIXME\|would.*implement\|actual.*implementation\|in production" \
-  <modified_directories> --include="*.go" --include="*.ts" --include="*.tsx" --include="*.py"
-```
+Every story-completion run executes the scan suite below. Each match is reviewed INDIVIDUALLY (§3.5) — never blanket-dismissed.
 
-```bash
-# Fail-fast violation scan (Python) — review EACH match individually
-
-# Silent error swallowing
-grep -rn "except.*pass$\|except:$" <modified_files> --include="*.py"
-
-# Clock domain substitution
-grep -rn "get_clock().now()\|time\.time()\|datetime\.now()" <modified_files> --include="*.py"
-
-# Default value substitution in error paths
-grep -rn "\.get(.*,\s*0)\|\.get(.*,\s*\"\")\|\.get(.*,\s*False)\|\.get(.*,\s*None)" <modified_files> --include="*.py"
-
-# Silent return on missing data
-grep -rn "return 0$\|return 0\.0$\|return \[\]$\|return None$\|return \"\"$" <modified_files> --include="*.py"
-
-# Bare except
-grep -rn "except:" <modified_files> --include="*.py"
-```
-
-**For EACH match:** Is it a genuine violation? If in doubt, it IS a violation — fix it. If you believe it's legitimate, get **explicit user confirmation** before dismissing.
-
-### 13.1.1 Language-Appropriate Static-Scan Baseline (HARD RULE)
-
-Static analysis is necessary but not sufficient for verification — but the baseline scans below are mandatory, not optional polish. They catch shell-semantics, YAML-shape, and lint issues no human reviewer reliably catches by eye.
-
-| Diff touches | Required static scan |
+| Scan category | What it catches |
 |---|---|
-| `*.sh` | `shellcheck -x -S warning <files>` (`-x` follows `source`; treat unreachable-code / quoting / word-splitting findings as bugs unless explicitly justified) |
-| `*.yaml` / `*.yml` | `yamllint <files>` if installed; schema-level validators (`docker compose config -q`, etc.) are necessary AND yamllint is additive |
-| `*.go` | `go vet ./...` (usually baked into `go test ./...`; verify it actually runs) |
-| `*.ts` / `*.tsx` | `tsc --noEmit` + `eslint` |
-| `*.py` | `ruff check` (or your project's equivalent) |
+| **Placeholder scan** | `TODO`, `FIXME`, `would.*implement`, `actual.*implementation`, "in production" stubs |
+| **Fail-fast scan** | Silent error swallowing, default-value substitution in error paths, silent-return-on-missing-data — see [Appendix C](#appendix-c-language-specific-scan-templates) for language-specific patterns |
+| **Hardcoded-config scan** (§3.6) | Language literals outside the loader package — every match is an explicit operator gate, never auto-dismissable |
+| **Static-scan baseline** | `shellcheck` / `yamllint` / `go vet` / `tsc --noEmit` / `ruff check` per the language touched (HARD RULE) |
+| **No-parallel-implementations scan** (§10) | Filename-pair (`<Prefix>X` next to `X`); parallel hook tree; parallel component tree; trap-phrase audit on LLDs without file-path anchors |
+| **Spec round-trip** (§8) | Wire-contract regeneration leaves zero diff vs the committed spec |
 
-Findings are NOT auto-dismissable as "false positives" — every finding gets the same treatment as a hardcoded-config match: STOP, diagnose, either fix the code or surface for explicit operator approval (with the reason recorded IN-SOURCE as a single-line disable directive AND in the commit message).
+**Concrete commands by language are in [Appendix C](#appendix-c-language-specific-scan-templates).** Fan-out shape: every scan runs in the SAME parallel batch as the reviewer agents (step d) — never chain serially.
 
-**Fan-out shape:** static-scan invocations run in the SAME parallel batch as the reviewer agents (step d). Don't chain serially.
-
-### 13.1.2 No Parallel Implementations Scan (HARD RULE)
-
-Run the §10 (No Parallel Implementations) scans on every diff:
-
-```bash
-# Filename-pair scan — flag <Prefix>X.tsx next to X.tsx
-# Substitute the scope prefixes your project actually uses
-# (e.g. Admin, Bulk, Tenant, Org, User, etc.).
-for f in src/pages/*.tsx; do
-  base=$(basename "$f" .tsx)
-  for prefix in Admin Bulk Tenant Org User; do
-    if [[ "$base" == "$prefix"* && "$base" != "$prefix" ]]; then
-      anchor="${base#$prefix}"
-      if [ -f "src/pages/${anchor}.tsx" ]; then
-        echo "§10 PAIR: ${anchor}.tsx ↔ ${base}.tsx"
-      fi
-    fi
-  done
-done
-
-# Trap-phrase audit on LLDs / epics / stories
-grep -rEn '(mirrors? existing|wider input|same compute|re-?use[s]? .* as[- ]is|extends? existing|parallel to existing|shares? the structure of)' \
-  design/ stories/ --include='*.md' \
-  | grep -v 'services/.*\.go\|src/.*\.tsx\|src/.*\.ts'
-# Any line that matches WITHOUT a source-file path on the same line is
-# an LLD-authoring quality miss; redraft so the trap-phrase carries
-# its anchor inline.
-```
-
-Each match is justified ONLY by an explicit Existing-Primitive Analysis entry in the owning story AND a §10.3 narrow-exception argument. NEVER auto-dismiss as "the new file is correctly implemented."
+**For EACH match:** Is it a genuine violation? If in doubt, it IS a violation — fix it. If you believe it's legitimate, get **explicit user confirmation** before dismissing. Silent-plausibility (§0) variant alert: "all 12 matches happen to equal the YAML so they're safe" is the kill-shot to watch for — every match must come from the loader regardless of whether the literal happens to be correct today.
 
 ### 13.2 Verify Each Acceptance Criterion
 
@@ -701,3 +680,174 @@ $ <deploy/test command>
 ---
 
 *These rules are non-negotiable. They exist because their absence caused real failures. Follow them exactly, and ask the user if anything is unclear.*
+
+---
+
+## Appendix A: Container Image Selection Protocol
+
+(Detail behind §2.1. Read this when proposing a new container; skip otherwise.)
+
+Pin every external dependency you run as a container (database, message broker, identity provider, headless browser, reverse proxy, etc.) deterministically — no guessing, no `library/<name>:latest`, no Docker-Hub-search heuristics.
+
+1. **Verify at the project's OFFICIAL source-of-truth site** (the vendor's docs / release-notes page) — NOT Docker Hub alone. The "Docker Official Image" badge is necessary but not sufficient.
+2. **If officially maintained:** pin the latest **LTS** `major.minor.patch` from the project's release page; if no LTS, latest stable (exclude `-rc` / `-alpha` / `-beta`).
+3. **If NOT officially maintained:** build your own Dockerfile FROM a minimal distro (`alpine:<pin>`, `gcr.io/distroless/static-nonroot`, etc.) following the project's install/build guide. The Dockerfile lives under `services/<svc>/Dockerfile` (multi-stage, non-root, read-only-rootfs).
+4. **Record in your version pin file** with a notes line citing the official-page URL that confirmed maintainership + the LTS/stable choice.
+
+**Web-fetch tool ladder** when verifying (fastest → most expensive):
+
+1. `wget` / `curl -fsSL` via your shell tool — clean pass/fail, cheap.
+2. Structured fetch tool (HTML → summary) — when the page is JS-light.
+3. Headless browser navigation — last resort only when 1 and 2 both fail (504, JS-rendered SPA, anti-bot CDN, login wall).
+
+If all three fail, STOP-ASK with the tool sequence + a fallback proposal (e.g., pin from a signed release-notes URL directly). NEVER pivot to an unverified tag to "make it work" — that's a silent-plausibility (§0) instance dressed as productivity.
+
+---
+
+## Appendix B: Per-Story Branch + PR + Merge Sequence
+
+(Detail behind §12 step f. Use this every story; the sequence is mechanical.)
+
+```bash
+# From a clean tree, branch from latest origin/main
+git fetch origin
+git switch -c <epic-NN-story-X.Y> origin/main
+
+# ... implement + verify ...
+
+# Commit atomically with the story ID + reviewer-verdict citation
+git add <specific files>
+git commit -m "EPIC_NN Story X.Y: <one-line summary>
+
+<body: what changed, why, reviewer verdicts cited>"
+
+git push -u origin <epic-NN-story-X.Y>
+
+# Open the PR; body includes reviewer verdicts + tracker row link
+gh pr create --base main --head <epic-NN-story-X.Y> \
+  --title "EPIC_NN Story X.Y: <one-line summary>" \
+  --body "<reviewer verdicts + tracker row link>"
+
+# Merge cleanly. If conflicts surface, RESOLVE on the feature branch.
+# NEVER --force, NEVER reset --hard main.
+gh pr merge --merge --delete-branch
+
+# Return to main; prune stale refs the merge left behind
+git switch main
+git pull --ff-only
+git fetch origin --prune
+```
+
+**Hard rules:**
+- NEVER push directly to `main`.
+- NEVER batch multiple stories into one commit.
+- Use `--rebase` only if the operator explicitly asks.
+- The audit trail is per-story-per-PR — this matters when a regression has to be tracked back to its source.
+
+---
+
+## Appendix C: Language-Specific Scan Templates
+
+(Detail behind §13.1. Run the scans for the languages your diff touches; ignore the rest.)
+
+### Placeholder scan (universal)
+
+```bash
+grep -rn "placeholder\|TODO\|FIXME\|would.*implement\|actual.*implementation\|in production" \
+  <modified_directories> \
+  --include="*.go" --include="*.ts" --include="*.tsx" --include="*.py" \
+  --include="*.sh" --include="*.java" --include="*.rs"
+```
+
+### Fail-fast scans
+
+**Python:**
+
+```bash
+# Silent error swallowing
+grep -rn "except.*pass$\|except:$" <files> --include="*.py"
+
+# Bare except
+grep -rn "except:" <files> --include="*.py"
+
+# Default-value substitution in error paths
+grep -rn "\.get(.*,\s*0)\|\.get(.*,\s*\"\")\|\.get(.*,\s*False)\|\.get(.*,\s*None)" <files> --include="*.py"
+
+# Silent return on missing data (§3.3 decision procedure applies)
+grep -rn "return 0$\|return 0\.0$\|return \[\]$\|return None$\|return \"\"$" <files> --include="*.py"
+```
+
+**Go:**
+
+```bash
+# Suppressed panics
+grep -rn 'recover()' <files> --include='*.go'
+
+# Silent-return on error
+grep -rn 'if err != nil { return [^e]' <files> --include='*.go' \
+  | grep -E 'return (nil|0|"")'
+
+# Underscore-assignment of errors (excluding test files)
+grep -rn '_ = ' <files> --include='*.go' | grep -v '_test.go'
+```
+
+**TypeScript / JavaScript:**
+
+```bash
+# Empty catch blocks
+grep -rn 'catch.*{}' <files> --include="*.ts" --include="*.tsx" --include="*.js"
+
+# Silent fallback defaults
+grep -rn '|| ""' <files> --include="*.ts" --include="*.tsx"
+grep -rn '?? null' <files> --include="*.ts" --include="*.tsx"
+```
+
+### SQL-injection scan (any language)
+
+```bash
+grep -rEn 'fmt\.Sprintf\(.*"(SELECT|INSERT|UPDATE|DELETE)' <files>     # Go
+grep -rEn 'f["\x27].*\b(SELECT|INSERT|UPDATE|DELETE)\b' <files>         # Python f-strings
+grep -rEn '`.*\$\{.*\}.*\b(SELECT|INSERT|UPDATE|DELETE)\b' <files>      # JS template literals
+```
+
+### Static-scan baseline (HARD RULE — run per language touched)
+
+| Diff touches | Required static scan |
+|---|---|
+| `*.sh` | `shellcheck -x -S warning <files>` |
+| `*.yaml` / `*.yml` | `yamllint <files>` + schema-level validators (`docker compose config -q`, etc.) |
+| `*.go` | `go vet ./...` (verify it actually runs) |
+| `*.ts` / `*.tsx` | `tsc --noEmit` + `eslint` |
+| `*.py` | `ruff check` (or your project's equivalent) |
+| `*.rs` | `cargo clippy -- -D warnings` |
+
+Findings are NOT auto-dismissable as "false positives" — every finding gets the same treatment as a hardcoded-config match: STOP, diagnose, either fix the code or surface for explicit operator approval (with the reason recorded IN-SOURCE as a single-line disable directive AND in the commit message).
+
+### No-Parallel-Implementations scan (universal — see §10)
+
+```bash
+# Filename-pair scan — flag <Prefix>X.tsx next to X.tsx
+# Substitute the scope prefixes your project actually uses
+# (e.g. Admin, Bulk, Tenant, Org, User, etc.).
+for f in src/pages/*.tsx; do
+  base=$(basename "$f" .tsx)
+  for prefix in Admin Bulk Tenant Org User; do
+    if [[ "$base" == "$prefix"* && "$base" != "$prefix" ]]; then
+      anchor="${base#$prefix}"
+      if [ -f "src/pages/${anchor}.tsx" ]; then
+        echo "§10 PAIR: ${anchor}.tsx ↔ ${base}.tsx"
+      fi
+    fi
+  done
+done
+
+# Trap-phrase audit on LLDs / epics / stories
+grep -rEn '(mirrors? existing|wider input|same compute|re-?use[s]? .* as[- ]is|extends? existing|parallel to existing|shares? the structure of)' \
+  design/ stories/ --include='*.md' \
+  | grep -v 'src/.*\.\(go\|ts\|tsx\|py\|rs\|java\)'
+# Any line that matches WITHOUT a source-file path on the same line is
+# an LLD-authoring quality miss; redraft so the trap-phrase carries
+# its anchor inline.
+```
+
+Each match is justified ONLY by an explicit Existing-Primitive Analysis entry in the owning story AND a §10.3 narrow-exception argument. NEVER auto-dismiss as "the new file is correctly implemented" — that's the silent-plausibility (§0) instance §10 exists to fight.
