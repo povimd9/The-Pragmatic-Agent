@@ -107,6 +107,8 @@ Ten operating principles, all subordinate to the silent-plausibility meta-rule a
 
 The fictional "TaskFlow" SaaS used throughout the samples is a multi-tenant task management platform — chosen because it's complex enough to demonstrate every pattern (multi-tenancy, RLS, real-time, mobile, auth) without exposing any real project data.
 
+**Everything under `examples/` is a starting shape, not a drop-in.** The TaskFlow domain, version pins, file paths, agent definitions, and grep patterns are illustrative; expect to rewrite them against your actual stack. The modules under `modules/` are similar — the rule statements travel, the literal greps and path patterns inside them are illustrative shapes to calibrate. See the per-file headers and `examples/README.md` for what's prescriptive vs illustrative at each layer.
+
 ---
 
 ## Quick start
@@ -116,7 +118,7 @@ The fictional "TaskFlow" SaaS used throughout the samples is a multi-tenant task
 3. **Point your agent's project memory at `modules/`** (or copy the relevant modules alongside your instruction file). The core is always in context; modules load on demand when their `Load when:` triggers match.
 4. **Copy `examples/VERSIONS.yaml`** and replace the sample versions with what you actually run.
 5. **Adopt the design pipeline gradually.** Start with the epic + story template for your next multi-file feature. Add LLDs when you hit a domain that needs deeper design. The HLD comes when the system is big enough to need one.
-6. **Run the verification scans in CI from day one** (see [`modules/scan-templates.md`](./modules/scan-templates.md)). They catch what reviewers miss.
+6. **Adapt the scan templates in [`modules/scan-templates.md`](./modules/scan-templates.md) to your stack and run them in CI from day one.** The greps in that module are illustrative shapes — calibrate the literals, paths, and language coverage to your project before relying on them. A scan that produces hundreds of false positives gets dismissed within a week; one that's tuned to your codebase catches what reviewers miss.
 
 Expected outcome: agents that fail loudly instead of plausibly, work that ships with runtime proof instead of "looks right," and a discipline that compounds — every new failure mode becomes a new rule.
 

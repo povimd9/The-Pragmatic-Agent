@@ -78,4 +78,4 @@ The right shape would have been: `Foo` and `FooBatch` as two top-level functions
 
 ## Detection Scan
 
-See [`scan-templates.md`](./scan-templates.md) for the No-Parallel-Implementations grep templates (filename-pair scan + trap-phrase audit).
+See [`scan-templates.md`](./scan-templates.md) for sample shapes (filename-pair scan + trap-phrase audit). Both samples need calibration: extend the prefix list (`Admin`, `Bulk`, `Tenant`, …) to match the scope prefixes your project actually uses, and extend the trap-phrase verb list (`mirrors`, `wider input`, `same compute`, …) to match your LLD authors' vocabulary (`expands`, `broadens`, `another flavor of`, …). The samples teach the technique; the patterns are project-specific.

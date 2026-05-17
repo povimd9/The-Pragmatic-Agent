@@ -1,5 +1,7 @@
 # CLAUDE.md — Workspace Root
 
+> **This file is a SAMPLE.** It demonstrates the shape of a workspace-root instruction file using the fictional TaskFlow project. The repo names, paths, build commands, architecture details, and rule examples below are illustrative — replace them with your project's actuals before using this as your real `CLAUDE.md`.
+
 This file provides guidance to AI agents working across all repositories in this workspace.
 Repository-specific instruction files reference this file for shared rules.
 

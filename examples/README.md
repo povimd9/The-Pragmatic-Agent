@@ -1,8 +1,10 @@
 # Example Templates & Samples
 
-This directory contains templates and filled-in examples for every document type referenced in the [Team Guide](../TEAM-GUIDE.md).
+**Everything in this directory is illustrative, not prescriptive.** The TaskFlow project is fictional; the version pins, file paths, agent definitions, and acceptance-criteria commands are demonstrations of *shape*. Copy them as starting points, then rewrite to match your stack, your domain, and your actual dependencies. Treating any sample as drop-in production-ready will either over-constrain your project to TaskFlow's shape or leave gaps where TaskFlow's shape doesn't match yours.
 
-All examples use a fictional **"TaskFlow"** project — a multi-tenant SaaS task management platform with a web frontend, backend API, and mobile companion app — to demonstrate the patterns without exposing any real project data.
+What travels: the structure (HLD → LLD → Epic → Story; the fields each document carries; the traceability rules; the agent role categories). What doesn't travel: the literal text inside any field — repo names, paths, versions, commands, sample acceptance criteria, fictional architecture details.
+
+This directory contains templates and filled-in examples for every document type referenced in the [Team Guide](../TEAM-GUIDE.md). All examples use a fictional **"TaskFlow"** project — a multi-tenant SaaS task management platform with a web frontend, backend API, and mobile companion app — chosen because it's complex enough to demonstrate every pattern (multi-tenancy, RLS, real-time, mobile, auth) without exposing any real project data.
 
 ---
 
