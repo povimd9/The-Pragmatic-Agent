@@ -2,7 +2,7 @@
 
 **Load when:** you're running completion-verification scans (every story before marking complete) OR setting up your project's CI pipeline.
 
-**Core rule lives in:** [`Agentic-AI-Agent-Instructions.md` §13.1](../Agentic-AI-Agent-Instructions.md#13-completion-verification).
+**Core rule lives in:** [`AGENT-INSTRUCTIONS.md` §13.1](../AGENT-INSTRUCTIONS.md#13-completion-verification).
 
 **Silent-plausibility variant fought:** "all scans clean" claims that ran the wrong scans, missed a language, or auto-dismissed findings.
 
@@ -146,10 +146,17 @@ for f in src/pages/*.tsx; do
   done
 done
 
-# Trap-phrase audit on LLDs / epics / stories
+# Trap-phrase audit on LLDs / epics / stories.
+# The exclusion filter removes lines that DO carry a file-path anchor;
+# the remaining matches are unanchored trap-phrases. The path pattern
+# is language-agnostic — it matches any token shaped like
+# "<segment>/<segment>.<extension>" (e.g., src/foo.go, lib/Bar.tsx,
+# pkg/baz/qux.py, internal/widget.rs). Tighten or extend the pattern
+# for your project if it false-positives on prose that looks like a
+# path, or if your codebase uses extension-less files as anchors.
 grep -rEn '(mirrors? existing|wider input|same compute|re-?use[s]? .* as[- ]is|extends? existing|parallel to existing|shares? the structure of)' \
   design/ stories/ --include='*.md' \
-  | grep -v 'src/.*\.\(go\|ts\|tsx\|py\|rs\|java\)'
+  | grep -vE '[A-Za-z0-9_./-]+/[A-Za-z0-9_.-]+\.[A-Za-z0-9]+'
 # Any line that matches WITHOUT a source-file path on the same line is
 # an LLD-authoring quality miss; redraft so the trap-phrase carries
 # its anchor inline.

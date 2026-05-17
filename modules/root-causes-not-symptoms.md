@@ -2,7 +2,7 @@
 
 **Load when:** a bug is reported AND you're considering a retry loop, timeout bump, fallback default, warning suppression, or cache-extension as the fix.
 
-**Core rule lives in:** [`Agentic-AI-Agent-Instructions.md` §11.1](../Agentic-AI-Agent-Instructions.md#11-surface-issues-dont-bypass-dont-paper-over).
+**Core rule lives in:** [`AGENT-INSTRUCTIONS.md` §11.1](../AGENT-INSTRUCTIONS.md#11-surface-issues-dont-bypass-dont-paper-over).
 
 **Silent-plausibility variant fought:** patches that look like reliability engineering but actually mask the underlying bug — the symptom goes away from view, the problem stays.
 

@@ -2,7 +2,7 @@
 
 **Load when:** an LLD / epic / story uses any anchor phrase ("extends X", "mirrors X", "wider input to X", "same compute new entry point", "re-use as-is", "alongside X", "parallel to X", "shares the structure of X") OR you're reviewing a diff that adds new files alongside existing ones with similar names.
 
-**Core rule lives in:** [`Agentic-AI-Agent-Instructions.md` §10](../Agentic-AI-Agent-Instructions.md#10-no-parallel-implementations--extend-existing-anchors).
+**Core rule lives in:** [`AGENT-INSTRUCTIONS.md` §10](../AGENT-INSTRUCTIONS.md#10-no-parallel-implementations--extend-existing-anchors).
 
 **Silent-plausibility variant fought:** new files that duplicate an anchor — content-correct in isolation, structurally wrong because the anchor already exists.
 

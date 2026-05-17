@@ -2,7 +2,7 @@
 
 **Load when:** you're proposing or pinning a new container image, or auditing your project's existing image pins.
 
-**Core rule lives in:** [`Agentic-AI-Agent-Instructions.md` §2.1](../Agentic-AI-Agent-Instructions.md#2-version--api-trust).
+**Core rule lives in:** [`AGENT-INSTRUCTIONS.md` §2.1](../AGENT-INSTRUCTIONS.md#2-version--api-trust).
 
 **Silent-plausibility variant fought:** `latest` tags or unverified Docker-Hub images that compile and run fine today but ship malware or break unpredictably tomorrow.
 

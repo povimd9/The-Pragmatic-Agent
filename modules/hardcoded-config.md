@@ -2,7 +2,7 @@
 
 **Load when:** you're writing or reviewing code that touches a config-derived value (timeout, threshold, retry count, host name, role name, feature flag, business constant — anything that COULD live in a config file).
 
-**Core rule lives in:** [`Agentic-AI-Agent-Instructions.md` §3.6](../Agentic-AI-Agent-Instructions.md#3-fail-fast-philosophy).
+**Core rule lives in:** [`AGENT-INSTRUCTIONS.md` §3.6](../AGENT-INSTRUCTIONS.md#3-fail-fast-philosophy).
 
 **Silent-plausibility variant fought:** language literals that happen to match the config file today and silently drift tomorrow.
 

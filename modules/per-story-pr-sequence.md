@@ -2,7 +2,7 @@
 
 **Load when:** you're at step (f) of the story cycle — branching, committing, and merging a completed story.
 
-**Core rule lives in:** [`Agentic-AI-Agent-Instructions.md` §12](../Agentic-AI-Agent-Instructions.md#12-your-role-in-story-execution) (step f).
+**Core rule lives in:** [`AGENT-INSTRUCTIONS.md` §12](../AGENT-INSTRUCTIONS.md#12-your-role-in-story-execution) (step f).
 
 **Silent-plausibility variant fought:** "I'll commit it all together at the end" batched commits that bury individual story changes in a too-big diff no human reviewer parses carefully.
 

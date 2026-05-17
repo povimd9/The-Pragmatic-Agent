@@ -2,7 +2,7 @@
 
 **Load when:** you're integrating with an off-the-shelf service (identity provider, OAuth2 server, message broker, search engine, observability stack, etc.) and considering wrapping or mirroring its primitives.
 
-**Core rule lives in:** [`Agentic-AI-Agent-Instructions.md` §9.1](../Agentic-AI-Agent-Instructions.md#9-code-conventions).
+**Core rule lives in:** [`AGENT-INSTRUCTIONS.md` §9.1](../AGENT-INSTRUCTIONS.md#9-code-conventions).
 
 **Silent-plausibility variant fought:** application-layer wrappers around primitives the off-the-shelf service already provides — adds maintenance surface, drifts from upstream behavior, often re-introduces the very security bugs the off-the-shelf service was chosen to avoid.
 

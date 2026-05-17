@@ -2,7 +2,7 @@
 
 **Load when:** a tool, framework, or runtime emits "ignored", "deprecated", or "not supported" warnings on a clean run — even when the warning claims "no runtime effect."
 
-**Core rule lives in:** [`Agentic-AI-Agent-Instructions.md` §9.2](../Agentic-AI-Agent-Instructions.md#9-code-conventions).
+**Core rule lives in:** [`AGENT-INSTRUCTIONS.md` §9.2](../AGENT-INSTRUCTIONS.md#9-code-conventions).
 
 **Silent-plausibility variant fought:** "harmless" log noise that hides real problems by training readers to skim warnings.
 

@@ -1,4 +1,4 @@
-# Agentic AI Guide For Developers
+# The Pragmatic Agent
 
 Guidance & templates for efficient agentic product development. Battle-tested practices from a multi-repository, safety-critical systems project.
 
@@ -8,7 +8,7 @@ Guidance & templates for efficient agentic product development. Battle-tested pr
 
 This repository contains two companion documents that work together to set up and run AI-assisted software development effectively:
 
-### [Agentic AI Guide For Teams](./Agentic-AI-Guide-For-Teams.md)
+### [Team Guide](./TEAM-GUIDE.md)
 
 **Audience:** Tech leads, prompt engineers, and engineering managers.
 
@@ -26,7 +26,7 @@ A practical guide for orchestrating AI agents in your development process. Cover
 - Escalation framework
 - Common pitfalls & lessons learned
 
-### [Agentic AI Agent Instructions](./Agentic-AI-Agent-Instructions.md)
+### [Agent Instructions](./AGENT-INSTRUCTIONS.md)
 
 **Audience:** AI agents (loaded into agent context at session start).
 
@@ -91,7 +91,7 @@ If you want the fastest path to a working setup, start with one instruction file
 2. If you only have a single repository, keep the shared rules and repo-specific rules in that one file rather than splitting root vs. repo files.
 3. Copy `examples/VERSIONS.yaml` and replace the sample components, dependencies, and versions with your real stack.
 4. Use `examples/stories/SAMPLE_EPIC_01_User_Auth.md` as the reference for how traceable stories, verification commands, and fail-fast rules should look when filled in.
-5. Adapt `Agentic-AI-Agent-Instructions.md` to your environment, then place it where your platform auto-loads instructions.
+5. Adapt `AGENT-INSTRUCTIONS.md` to your environment, then place it where your platform auto-loads instructions.
 
 Expected outcome: the agent starts each session with explicit fail-fast rules, known version pins, and story-level verification commands instead of guessing.
 

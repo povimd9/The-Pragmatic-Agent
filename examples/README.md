@@ -1,6 +1,6 @@
 # Example Templates & Samples
 
-This directory contains templates and filled-in examples for every document type referenced in the [Agentic AI Guide For Teams](../Agentic-AI-Guide-For-Teams.md).
+This directory contains templates and filled-in examples for every document type referenced in the [Team Guide](../TEAM-GUIDE.md).
 
 All examples use a fictional **"TaskFlow"** project — a multi-tenant SaaS task management platform with a web frontend, backend API, and mobile companion app — to demonstrate the patterns without exposing any real project data.
 

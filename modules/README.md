@@ -1,7 +1,7 @@
 # Agent Instruction Modules
 
 These are **optional deep-detail modules** referenced from the core
-[`Agentic-AI-Agent-Instructions.md`](../Agentic-AI-Agent-Instructions.md).
+[`AGENT-INSTRUCTIONS.md`](../AGENT-INSTRUCTIONS.md).
 The core file is always loaded; modules are loaded on demand when a
 specific topic comes up in your work.
 

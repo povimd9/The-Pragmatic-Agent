@@ -4,7 +4,7 @@
 
 *This document is loaded into your context at the start of every session. Every rule exists because its absence caused a real bug, integration failure, or wasted work. Follow them exactly.*
 
-*Companion document: [**Agentic-AI-Guide-For-Teams.md**](./Agentic-AI-Guide-For-Teams.md) (for humans setting up and orchestrating AI-assisted development).*
+*Companion document: [**TEAM-GUIDE.md**](./TEAM-GUIDE.md) (for humans setting up and orchestrating AI-assisted development).*
 
 *Deep detail for specific rules lives in [**`modules/`**](./modules/). Load a module when the topic comes up in your work; the [module map](./modules/README.md) lists the trigger conditions.*
 

@@ -2,7 +2,7 @@
 
 **Load when:** you're writing integration code that touches a shared message format, API contract, or wire schema.
 
-**Core rule lives in:** [`Agentic-AI-Agent-Instructions.md` §8](../Agentic-AI-Agent-Instructions.md#8-specification-compliance).
+**Core rule lives in:** [`AGENT-INSTRUCTIONS.md` §8](../AGENT-INSTRUCTIONS.md#8-specification-compliance).
 
 **Silent-plausibility variant fought:** code that compiles and runs but uses field names that differ from the spec — looks correct, breaks integration silently when the consumer parses the message.
 

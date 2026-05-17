@@ -2,7 +2,7 @@
 
 **Load when:** you're integrating an external data source (vendor API, scraper, screener, third-party feed, file import).
 
-**Core rule lives in:** [`Agentic-AI-Agent-Instructions.md` §3.7](../Agentic-AI-Agent-Instructions.md#3-fail-fast-philosophy).
+**Core rule lives in:** [`AGENT-INSTRUCTIONS.md` §3.7](../AGENT-INSTRUCTIONS.md#3-fail-fast-philosophy).
 
 **Silent-plausibility variant fought:** 200-OK responses carrying NaN, negative prices, stale timestamps, or schema-shape drift.
 

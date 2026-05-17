@@ -2,7 +2,7 @@
 
 **Load when:** you're writing or reviewing a multi-tenant request handler (any code that decides which tenant's data to read or write).
 
-**Core rule lives in:** [`Agentic-AI-Agent-Instructions.md` §7.1](../Agentic-AI-Agent-Instructions.md#7-security).
+**Core rule lives in:** [`AGENT-INSTRUCTIONS.md` §7.1](../AGENT-INSTRUCTIONS.md#7-security).
 
 **Silent-plausibility variant fought:** handlers that look like they enforce tenant isolation but trust the client to identify itself, opening an OWASP A01 (broken access control) vector.
 

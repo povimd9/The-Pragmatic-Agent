@@ -1,4 +1,4 @@
-# Agentic AI Development: Guide for Teams
+# The Pragmatic Agent — Team Guide
 
 ## Setting Up and Running AI-Assisted Software Development
 
@@ -43,7 +43,7 @@ If you find yourself uncertain how to apply a rule, re-derive it from the frame:
 
 The most damaging output agents produce isn't crashes — it's **silent plausibility**: code, docs, or verdicts that look right and are wrong. A fallback value that hides a missing config. A parallel file that duplicates an existing anchor. A scan finding dismissed as "matches the YAML so it's safe." A reviewer verdict that grades content correctness without checking shape.
 
-Every rule in the agent instructions points at one variant of silent plausibility. The Agent Instructions [§0 map](./Agentic-AI-Agent-Instructions.md#0-silent-plausibility--the-meta-anti-pattern) shows rule-by-rule which variant each one fights.
+Every rule in the agent instructions points at one variant of silent plausibility. The Agent Instructions [§0 map](./AGENT-INSTRUCTIONS.md#0-silent-plausibility--the-meta-anti-pattern) shows rule-by-rule which variant each one fights.
 
 The diagnostic question for any agent-produced artifact: **"Could this output be wrong in a way no one will notice?"** If yes, you're looking at silent plausibility; apply the relevant rule before shipping.
 
@@ -309,7 +309,7 @@ AI agents lose context through compression and across sessions. Your instruction
 
 ### 4.4 The Companion Agent Instruction File
 
-Alongside this team guide, maintain the companion document **[Agentic-AI-Agent-Instructions.md](./Agentic-AI-Agent-Instructions.md)**, which contains the actual rules loaded into the agent's context. The two files mirror each other:
+Alongside this team guide, maintain the companion document **[AGENT-INSTRUCTIONS.md](./AGENT-INSTRUCTIONS.md)**, which contains the actual rules loaded into the agent's context. The two files mirror each other:
 
 | Team Guide Section | Agent Instructions Section |
 |-------------------|--------------------------|
@@ -331,11 +331,11 @@ Instruction files are living documents. Every time an agent violates a rule that
 
 **Rule quality benchmark:** If you can show someone the rule and they could both identify a violation and fix it without asking follow-up questions, the rule is good. If not, it needs a code example or concrete scan command.
 
-#### Memory Files: Project-Scoped Persistent Rules (Optional Pattern)
+#### Storing Your Rule Corpus: Three Patterns
 
-Two patterns work for storing your rule corpus; pick based on your model's context budget and how often you spawn narrow-scope sub-agents.
+The rule corpus can be organized three ways. Pick based on your model's context budget, how often you spawn narrow-scope sub-agents, and how heavy the rules' deep-detail content is. **This repo demonstrates Pattern C** (see `AGENT-INSTRUCTIONS.md` + the `modules/` directory).
 
-**Pattern A — Monolithic instruction file.** All rules live in one document, loaded in full at session start. Works well on modern models with multi-hundred-thousand-token context windows; readers can grep / scroll the whole rule set in one place. This is the default — most projects don't need anything more.
+**Pattern A — Monolithic instruction file.** All rules + their deep detail live in one document, loaded in full at session start. Simplest to author and read end-to-end; works well on modern models with multi-hundred-thousand-token context windows; readers can grep / scroll the whole rule set in one place.
 
 **Pattern B — Per-rule memory files.** Each rule lives in its own short markdown file under a memory directory, indexed by a one-line-per-entry index:
 
@@ -351,14 +351,29 @@ Two patterns work for storing your rule corpus; pick based on your model's conte
 
 Each memory file is **named for the rule**, opens with a one-line description usable in the index, and contains: (a) the rule itself, (b) a `Why:` line citing the past incident that triggered it, (c) a `How to apply:` block with concrete grep commands or code patterns.
 
-**Use Pattern B when:**
-- Your model's context is tight relative to the rule corpus (older models, very large rule sets).
-- You spawn narrow-scope sub-agents that should load just the rules relevant to their task, not the whole instruction file.
-- You want grep-fast rule discovery — searching for `feedback_no_parallel_implementations.md` is faster than scrolling a 5,000-line monolith.
+**Pattern C — Core + modules (the hybrid).** A short core file holds every rule's WHAT + one-or-two-sentence WHY + a pointer to a topic-named module that holds the deep detail. Modules open with a **"Load when:"** trigger that names the conditions for loading. The core is always in context; modules are loaded on demand when their topic comes up in your current task.
 
-**Use Pattern A when:** your context budget comfortably holds the full instruction file AND you don't dispatch narrow-scope sub-agents.
+```
+AGENT-INSTRUCTIONS.md     # core: rule statements + module pointers
+modules/
+  README.md                # module map (load-when table)
+  no-parallel-implementations.md
+  hardcoded-config.md
+  content-validation.md
+  ...
+```
 
-Either pattern, the discipline is the same: one rule = one logical unit (file or section), named for the rule, with a `Why:` line citing the past incident and a `How to apply:` block. Update or remove rules that turn out to be wrong; never let a stale rule linger.
+Each module is **named for the topic**, opens with a `Load when:` line, and contains the deep detail (worked examples, anti-pattern catalogs, decision procedures, grep commands).
+
+#### Pattern Selection
+
+| Use Pattern | When |
+|---|---|
+| **A — Monolithic** | Your rule set is small (under ~500 lines), your model's context budget is generous, and you don't spawn narrow-scope sub-agents. Simplest to maintain. |
+| **B — Per-rule memory** | Your model's context is tight relative to the rule corpus (older models, very large rule sets), OR you spawn narrow-scope sub-agents that should load just the rules relevant to their task. |
+| **C — Core + modules** | Your rule set is large enough that a monolith is unwieldy AND your readers want a tight "what are the rules?" overview separate from the deep-detail content (e.g., a public-facing template). Authors split content along the "what / how / why" seam: WHAT in core, HOW and WHY in modules. |
+
+Whichever pattern you pick, the discipline is the same: one rule = one logical unit (file or section), named for the rule, with a `Why:` line citing the past incident and a `How to apply:` block. Update or remove rules that turn out to be wrong; never let a stale rule linger.
 
 ---
 
@@ -894,4 +909,4 @@ Define clear triggers for when the agent must stop and ask the human:
 
 ---
 
-*This guide is designed to be adapted. Remove what doesn't apply to your project, add your domain-specific rules, and evolve it as you learn what your agents get wrong. Use agents at every layer — design, planning, implementation, review — and reserve human effort for what only humans can do: providing direction, making decisions, and owning the outcome. The companion document, **[Agentic-AI-Agent-Instructions.md](./Agentic-AI-Agent-Instructions.md)**, contains the rules that get loaded into agent context — maintain them in parallel.*
+*This guide is designed to be adapted. Remove what doesn't apply to your project, add your domain-specific rules, and evolve it as you learn what your agents get wrong. Use agents at every layer — design, planning, implementation, review — and reserve human effort for what only humans can do: providing direction, making decisions, and owning the outcome. The companion document, **[AGENT-INSTRUCTIONS.md](./AGENT-INSTRUCTIONS.md)**, contains the rules that get loaded into agent context — maintain them in parallel.*
