@@ -68,6 +68,32 @@ Plans missing this section are rejected at sanity-check.
 
 Verdicts grading CONTENT (placeholders / fail-fast / SQL / decimal / etc.) without verifying SHAPE are INVALID — re-run.
 
+### Shape: Line Templates
+
+The `Shape:` line is the reviewer's first sentence. It either passes the shape check or blocks the merge — content findings come after. Sample shapes:
+
+**PASS — anchor modified in place:**
+```
+Shape: PASS — anchor `pkg/foo/foo.go::Foo` modified; new entry point `FooBatch` added in same file, delegates to internal `fooCore`. No parallel file introduced.
+```
+
+**PASS — narrow exception justified:**
+```
+Shape: PASS — net-new file `pkg/foo/scheduled/foo.go` introduced; justified per story's Existing-Primitive Analysis as distinct lifecycle entry point (cron worker vs HTTP handler). Shared business logic lives in `pkg/foo/internal/core/` which both call. Narrow-exception argument verified at story plan §X.
+```
+
+**BLOCK — parallel file:**
+```
+Shape: BLOCK — diff introduced `pkg/foo/bar/foo.go` (438 LOC) alongside anchor `pkg/foo/foo.go` (712 LOC). Story's Existing-Primitive Analysis names the anchor as the extension target ("wider input to existing foo.go") but the diff created a sibling instead of extending. Re-implement as `FooBatch` in the anchor; share logic via internal `fooCore`. Content review deferred until shape is correct.
+```
+
+**BLOCK — net-new without justification:**
+```
+Shape: BLOCK — diff introduced `src/components/admin/UserList.tsx`; no Existing-Primitive Analysis row covers this artifact. Either name the existing anchor (likely `src/components/UserList.tsx` per the scope-prefix scan) and extend it, or add a narrow-exception justification to the story plan. Content review deferred.
+```
+
+The pattern: one sentence stating PASS or BLOCK + the anchor + the diff shape. Content findings follow in subsequent sections of the verdict.
+
 ## Worked Anti-Example
 
 A team's epic said: "Feeds the existing Foo processor ONE wider input vector (same compute, no algorithmic change ... just a wider input)" — anchor `pkg/foo/foo.go`. The implementer read "new entry point" as "new package + parallel file" and produced `pkg/foo/bar/foo.go` (472 LOC) next to `pkg/foo/foo.go` (713 LOC), re-writing the input-validation logic from scratch and silently missing one validation step. Every reviewer passed the new file in isolation because it was correctly implemented in isolation; none flagged that the same function existed 12 lines above. Latent bug shipped to main. **The bug was that the new file existed at all.**

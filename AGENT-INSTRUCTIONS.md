@@ -2,9 +2,7 @@
 
 ## Rules for AI Agents in Software Development
 
-*This document is loaded into your context at the start of every session. Every rule exists because its absence caused a real bug, integration failure, or wasted work. Follow them exactly.*
-
-*The version of this file in **The Pragmatic Agent** repo is a **reference template**. Teams adopting it are expected to calibrate every rule, scan, path, and command to their stack before treating the file as authoritative for their agents. "Follow them exactly" applies to your project's calibrated copy — not to the upstream template.*
+*This document is loaded into your context at the start of every session. Every rule exists because its absence caused a real bug, integration failure, or wasted work. The version of this file in **The Pragmatic Agent** repo is a **reference template** — teams adopting it calibrate every rule, scan, path, and command to their stack before pinning it as their authoritative copy. Once calibrated, follow the rules exactly.*
 
 *Companion document: [**TEAM-GUIDE.md**](./TEAM-GUIDE.md) (for humans setting up and orchestrating AI-assisted development).*
 

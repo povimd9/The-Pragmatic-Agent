@@ -1,5 +1,7 @@
 # TaskFlow Platform — High-Level Design
 
+> **This is a SAMPLE.** TaskFlow is a fictional project. All dates, version strings, owner names, line numbers, and architecture details below are illustrative — they exist to demonstrate the shape of a complete HLD, not to assert facts about a real system. Replace every field with your project's actuals before treating this as authoritative.
+
 **Version:** 1.0.0
 **Status:** Approved
 **Last Updated:** 2025-03-18

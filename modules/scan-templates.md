@@ -143,13 +143,13 @@ Every match is an EXPLICIT operator-approval gate. NEVER auto-dismiss as "matche
 
 | Diff touches | Required static scan |
 |---|---|
-| `*.sh` | `shellcheck -x -S warning <files>` |
-| `*.yaml` / `*.yml` | `yamllint <files>` + schema-level validators (`docker compose config -q`, etc.) |
-| `*.go` | `go vet ./...` (verify it actually runs as part of `go test ./...`) |
-| `*.ts` / `*.tsx` | `tsc --noEmit` + `eslint` |
-| `*.py` | `ruff check` (or your project's equivalent) |
-| `*.rs` | `cargo clippy -- -D warnings` |
-| `*.java` | `spotbugs` or `errorprone` per project convention |
+| `*.sh` | `shellcheck -x -S warning <files>` (or your project's shell linter of choice) |
+| `*.yaml` / `*.yml` | `yamllint <files>` + schema-level validators (`docker compose config -q`, etc.; or your project's YAML toolchain) |
+| `*.go` | `go vet ./...` (or `staticcheck`, `golangci-lint`, etc. — verify whichever you pick actually runs as part of `go test ./...`) |
+| `*.ts` / `*.tsx` | `tsc --noEmit` + `eslint` (or `biome`, `oxlint`, etc. per project convention) |
+| `*.py` | `ruff check` (or `flake8` + `mypy`, `pylint`, etc. per project convention) |
+| `*.rs` | `cargo clippy -- -D warnings` (or your project's lint toolchain) |
+| `*.java` | `spotbugs` or `errorprone` (or `pmd`, `checkstyle`, etc. per project convention) |
 
 Findings are NOT auto-dismissable as "false positives" — every finding gets the same treatment as a hardcoded-config match: STOP, diagnose, either fix the code or surface for explicit operator approval (with the reason recorded IN-SOURCE as a single-line disable directive AND in the commit message).
 
