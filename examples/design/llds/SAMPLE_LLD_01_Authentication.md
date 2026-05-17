@@ -1,5 +1,7 @@
 # LLD #01: Authentication & Authorization
 
+> **This is a SAMPLE.** TaskFlow is fictional. All dates, version strings, owner names, library versions, and field-level details are illustrative. Replace with your project's actuals before adopting.
+
 **Version:** 1.0.0
 **Status:** Approved
 **Last Updated:** 2025-03-15

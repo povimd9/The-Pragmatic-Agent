@@ -52,6 +52,15 @@ input to X", "same compute new entry point", "re-use X as-is",
 "extends X", "alongside X", "parallel to X", "shares the structure
 of X") MUST name the anchor BY FILE PATH on the same line.
 
+**Relationship to per-story analysis.** This LLD-level table is the
+**source** for the per-story **Existing-Primitive Analysis** table
+that every story in the owning epic carries (per `EPIC_TEMPLATE.md`).
+Same data at different layers: the LLD-level map names the anchors
+once for the whole component; each story's analysis inherits the
+relevant rows and adds the diff-shape detail for that story's
+specific artifacts. If an artifact appears in a story's analysis
+without showing up here first, the LLD is incomplete — add it.
+
 Net-new artifacts MUST be justified under the narrow-exception list
 (genuinely different domain / distinct lifecycle entry point with a
 shared internal package / no meaningful shared code post-extraction)

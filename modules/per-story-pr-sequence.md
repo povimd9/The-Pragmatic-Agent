@@ -6,6 +6,8 @@
 
 **Silent-plausibility variant fought:** "I'll commit it all together at the end" batched commits that bury individual story changes in a too-big diff no human reviewer parses carefully.
 
+> **Forge-agnostic note.** The sequence below uses GitHub's `gh` CLI as the concrete example. Teams on GitLab (`glab`), Bitbucket (`bb`/`bb-cli`), Gitea (`tea`), Mercurial (`hg`), or other forges should substitute the equivalent commands — the **shape** of the flow (atomic commit on a feature branch → PR/MR with reviewer-verdict body → merge-with-branch-delete → fetch + prune) is what travels; the CLI is project-specific.
+
 ---
 
 ## The Sequence

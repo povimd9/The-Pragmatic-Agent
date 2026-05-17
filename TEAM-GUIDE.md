@@ -375,6 +375,29 @@ Each module is **named for the topic**, opens with a `Load when:` line, and cont
 
 Whichever pattern you pick, the discipline is the same: one rule = one logical unit (file or section), named for the rule, with a `Why:` line citing the past incident and a `How to apply:` block. Update or remove rules that turn out to be wrong; never let a stale rule linger.
 
+#### Migrating Between Patterns
+
+Most teams pick a pattern once and stay with it. If you outgrow yours, migrate deliberately rather than letting it drift.
+
+**Triggers to migrate:** the instruction file is so long that fresh-session reading takes more than ~5 minutes; the agent visibly "forgets" rules buried at the bottom; specific narrow-scope sub-agent calls would benefit from loading only the relevant rule corpus; the file's edit history shows rules being silently duplicated because no one wanted to scroll to find the existing place.
+
+**A → C (monolithic → core + modules)** — the most common migration:
+1. Identify the rules whose **deep detail** (worked examples, anti-pattern catalogs, grep commands, decision procedures) dominates the file's bulk.
+2. For each such rule, create `modules/<rule-name>.md` opening with a `Load when:` trigger. Move the deep detail there.
+3. In the core file, leave the rule's WHAT + 1-2 sentence WHY + a one-line pointer to the module.
+4. Add `modules/README.md` as the module map (one row per module: name + load-when trigger).
+5. Validate by reading the core end-to-end without loading any module — does every rule still land as a complete statement? If not, the WHAT/HOW split was wrong; pull more back into core.
+
+**A → B (monolithic → per-rule memory):**
+1. Pick the memory directory location your platform supports (e.g., `.agent-memory/`).
+2. For each rule in the monolith, create `feedback_<rule-name>.md` containing: the rule, a `Why:` line citing the past incident, a `How to apply:` block.
+3. Create `MEMORY.md` index — one line per rule, linking to its file.
+4. Drop the monolith OR keep it as a thin "see the memory dir" pointer; both work.
+
+**B → C** is rare — when a team that was using per-rule memory wants to expose a public-facing condensed core. Build the core from the union of memory files' WHAT/WHY headers; modules are the original per-rule files renamed for `Load when:` trigger discoverability.
+
+**Common mistake during migration:** moving the rule statement into the module and leaving an empty WHY-pointer in core. The core should still tell the reader WHAT the rule is — module loading is for HOW and WHY depth, not for the rule's existence.
+
 ---
 
 ## 5. Defining Agent Roles & Authority
@@ -545,7 +568,7 @@ The table lists **scan categories that every project running this discipline sho
 | Fail-fast violations | bare `except`, `.get(key, default)` in error paths, silent return None | §3 (Fail-Fast) |
 | SQL injection | `fmt.Sprintf` / string interpolation in SQL | §7 (Security) |
 | Hardcoded config | language literals outside the loader package — every match is an explicit gate, never auto-dismissable | §3.6 (No Hardcoded Config) |
-| Static-scan baseline | shellcheck / yamllint / `go vet` / `tsc --noEmit` / language linter | §13.1.1 (Static Scans Are Basic Tests) |
+| Static-scan baseline | shellcheck / yamllint / `go vet` / `tsc --noEmit` / language linter (per project convention — pick one per language and document it) | §13.1.1 (Static Scans Are Basic Tests) |
 | Parallel implementation | scope-prefixed file next to anchor file; parallel hook/component tree; orchestrator duplicates | §10 (No Parallel Implementations) |
 | Trap-phrase audit on LLDs/epics | "mirrors", "wider input", "same compute", "re-use as-is", "extends" used without naming the anchor by file path | §10.5 (LLD-authoring quality gate) |
 | Spec round-trip | OpenAPI / wire-contract regeneration leaves zero diff vs committed; bidirectional code↔spec parity | §8 (Spec Compliance) |

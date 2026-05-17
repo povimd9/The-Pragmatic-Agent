@@ -1,5 +1,7 @@
 # [EPIC] LLD #01.1: Authentication — JWT Middleware & RBAC
 
+> **This is a SAMPLE.** TaskFlow is fictional. All LLD references, line numbers, acceptance-criteria commands, dates, version strings, and team names are illustrative. Replace with your project's actuals before adopting.
+
 **Epic ID:** EPIC_01.1
 **File Name:** `EPIC_01.1_JWT_Middleware_RBAC.md`
 **Implementation Domain:** Backend
